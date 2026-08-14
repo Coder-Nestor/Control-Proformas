@@ -1,4 +1,4 @@
-# Configuración con credenciales reales (cada quien tiene la suya)
+:# Configuración con credenciales reales (cada quien tiene la suya)
 config/config.php
 
 # Documentos PDF subidos por los usuarios (datos reales, no pertenecen al código)

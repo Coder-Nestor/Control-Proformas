@@ -1,0 +1,12 @@
+# Esta carpeta solo debe servir archivos PDF ya subidos y validados.
+# Se deshabilita la ejecución de PHP y cualquier otro script por seguridad,
+# y se evita el listado de directorios.
+
+Options -Indexes -ExecCGI
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+
+<FilesMatch "\.(php|php3|php4|php5|phtml|pl|py|cgi|sh)$">
+    Require all denied
+</FilesMatch>

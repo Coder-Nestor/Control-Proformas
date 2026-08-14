@@ -1,0 +1,22 @@
+# Configuración con credenciales reales (cada quien tiene la suya)
+config/config.php
+
+# Documentos PDF subidos por los usuarios (datos reales, no pertenecen al código)
+public/uploads/gestiones/*
+public/uploads/proformas/*
+public/uploads/ordenes_compra/*
+public/uploads/facturas/*
+public/uploads/entregas/*
+!public/uploads/*/.gitkeep
+!public/uploads/.htaccess
+
+# Logs
+logs/*.log
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Backups de base de datos que hayas descargado localmente
+*.sql.bak

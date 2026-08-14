@@ -1,0 +1,19 @@
+RewriteEngine On
+
+# Si el archivo o carpeta solicitado existe físicamente (css, js, imágenes), sírvelo tal cual.
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Todo lo demás pasa por el front controller.
+RewriteRule ^ index.php [L]
+
+# Cabeceras de seguridad básicas
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# Evita listar el contenido de carpetas
+Options -Indexes

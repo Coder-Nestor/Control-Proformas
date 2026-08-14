@@ -1,0 +1,350 @@
+<?php
+$g = $gestion ?? [];
+$isEdit = !empty($g['id']);
+$trabajos = $trabajos ?? [];
+$val = fn($campo) => e($g[$campo] ?? '');
+?>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-0 fw-bold text-primary">
+            <i class="bi bi-clipboard-check me-2"></i><?= $isEdit ? 'Editar gestión #' . (int) $g['id'] : 'Nueva gestión' ?>
+        </h4>
+        <small class="text-muted"><?= $isEdit ? 'Actualiza la información de la gestión' : 'Ingresa los datos de la nueva gestión' ?></small>
+    </div>
+    <a href="<?= base_url('/gestiones') ?>" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+        <i class="bi bi-arrow-left"></i> Volver
+    </a>
+</div>
+
+<form method="POST" action="<?= $isEdit ? base_url('/gestiones/' . $g['id']) : base_url('/gestiones') ?>" enctype="multipart/form-data">
+    <?= csrf_field() ?>
+
+    <!-- Sección: Datos generales -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-bottom-0 pt-3 pb-0">
+            <h6 class="fw-bold text-secondary">
+                <i class="bi bi-building me-2 text-primary"></i>Datos generales de la cotización
+            </h6>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Proveedor <span class="text-danger">*</span></label>
+                    <select name="proveedor_id" class="form-select" required>
+                        <option value="">Selecciona un proveedor...</option>
+                        <?php foreach ($proveedores as $p): ?>
+                            <option value="<?= (int) $p['id'] ?>" <?= (string) ($g['proveedor_id'] ?? '') === (string) $p['id'] ? 'selected' : '' ?>><?= e($p['nombre']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">N° Cotización</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light"><i class="bi bi-hash"></i></span>
+                        <input type="text" name="n_cotizacion" value="<?= $val('n_cotizacion') ?>" class="form-control" placeholder="Ej. S06603">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Solicitado por</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light"><i class="bi bi-person"></i></span>
+                        <input type="text" name="solicitado_por" value="<?= $val('solicitado_por') ?>" class="form-control" placeholder="Ej. Aud. Prod. Agrícola">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Aprobado por</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light"><i class="bi bi-person-check"></i></span>
+                        <input type="text" name="aprobado_por" value="<?= $val('aprobado_por') ?>" class="form-control" placeholder="Nombre del aprobador">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sección: Trabajos -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-bottom-0 pt-3 pb-0">
+            <div class="d-flex justify-content-between align-items-center">
+                <h6 class="fw-bold text-secondary mb-0">
+                    <i class="bi bi-list-task me-2 text-primary"></i>Trabajos de esta cotización
+                </h6>
+                <button type="button" class="btn btn-primary btn-sm rounded-pill px-3" id="btnAgregarTrabajo">
+                    <i class="bi bi-plus-lg"></i> Agregar trabajo
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div id="trabajosContainer"></div>
+
+            <div class="d-flex justify-content-between align-items-center border-top pt-3 mt-2">
+                <small class="text-muted">
+                    <i class="bi bi-info-circle me-1"></i>Cada trabajo puede asignarse a una proforma distinta
+                </small>
+                <div class="bg-primary bg-opacity-10 px-4 py-2 rounded">
+                    <strong>Total: <span class="text-primary" id="totalTrabajos">L. 0.00</span></strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sección: Fechas -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-bottom-0 pt-3 pb-0">
+            <h6 class="fw-bold text-secondary">
+                <i class="bi bi-calendar-event me-2 text-primary"></i>Fechas clave
+            </h6>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Aprobación por ACHSA</label>
+                    <input type="date" name="fecha_aprobacion_trabajo" value="<?= $val('fecha_aprobacion_trabajo') ?>" class="form-control">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Finalización por HELIOS</label>
+                    <input type="date" name="fecha_finalizacion_trabajo" value="<?= $val('fecha_finalizacion_trabajo') ?>" class="form-control">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Revisión para facturar</label>
+                    <input type="date" name="fecha_revision_cotizacion" value="<?= $val('fecha_revision_cotizacion') ?>" class="form-control">
+                    <small class="text-muted">Deja en blanco si aún no se revisa</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sección: Documento -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-bottom-0 pt-3 pb-0">
+            <h6 class="fw-bold text-secondary">
+                <i class="bi bi-file-pdf me-2 text-danger"></i>Documento escaneado
+            </h6>
+        </div>
+        <div class="card-body">
+            <?php if ($isEdit && !empty($g['documento_pdf'])): ?>
+                <div class="alert alert-light border d-flex justify-content-between align-items-center py-2 mb-3">
+                    <span><i class="bi bi-file-earmark-pdf text-danger me-2"></i> Documento actual: <strong><?= e($g['documento_pdf']) ?></strong></span>
+                    <a href="<?= base_url('uploads/gestiones/' . e($g['documento_pdf'])) ?>" target="_blank" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-eye"></i> Ver PDF
+                    </a>
+                </div>
+            <?php endif; ?>
+            <div class="dropzone-wrapper border rounded p-4 text-center bg-light">
+                <div class="mb-2">
+                    <i class="bi bi-cloud-upload text-primary" style="font-size: 2rem;"></i>
+                </div>
+                <p class="mb-1">Arrastra tu archivo aquí o haz clic para seleccionar</p>
+                <input type="file" name="documento_pdf" accept="application/pdf" class="form-control" id="pdfInput">
+                <small class="text-muted">Solo PDF, máx. 10 MB</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sección: Comentario -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-bottom-0 pt-3 pb-0">
+            <h6 class="fw-bold text-secondary">
+                <i class="bi bi-chat-dots me-2 text-primary"></i>Comentarios adicionales
+            </h6>
+        </div>
+        <div class="card-body">
+            <textarea name="comentario" rows="3" class="form-control" placeholder="Escribe aquí cualquier observación o detalle adicional..."><?= $val('comentario') ?></textarea>
+        </div>
+    </div>
+
+    <!-- Botones de acción -->
+    <div class="d-flex gap-2 mb-5">
+        <button type="submit" class="btn btn-primary px-4 py-2 rounded-pill">
+            <i class="bi bi-save me-2"></i> <?= $isEdit ? 'Guardar cambios' : 'Registrar gestión' ?>
+        </button>
+        <a href="<?= base_url('/gestiones') ?>" class="btn btn-outline-secondary px-4 py-2 rounded-pill">
+            Cancelar
+        </a>
+    </div>
+</form>
+
+<!-- Plantilla de opciones de proforma -->
+<template id="proformaOptionsTemplate">
+    <option value="">— Sin asignar —</option>
+    <?php foreach ($proformas as $p): ?>
+        <option value="<?= (int) $p['id'] ?>">
+            <?= e($p['n_proforma'] ?: ('Proforma #' . $p['id'])) ?><?= $p['fecha_solicitud'] ? ' (' . fmt_date($p['fecha_solicitud']) . ')' : '' ?>
+        </option>
+    <?php endforeach; ?>
+</template>
+
+<style>
+    /* Estilos personalizados para mejorar la apariencia */
+    .dropzone-wrapper {
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: 2px dashed #dee2e6 !important;
+        background-color: #f8f9fa;
+    }
+
+    .dropzone-wrapper:hover {
+        border-color: #0d6efd !important;
+        background-color: #f0f7ff;
+    }
+
+    .dropzone-wrapper input[type="file"] {
+        opacity: 0;
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        cursor: pointer;
+    }
+
+    .trabajo-row {
+        background-color: #fafbfc;
+        padding: 1rem;
+        border-radius: 8px;
+        transition: background-color 0.2s ease;
+    }
+
+    .trabajo-row:hover {
+        background-color: #f0f4ff;
+    }
+
+    .trabajo-row .btn-outline-danger {
+        border-color: transparent;
+    }
+
+    .trabajo-row .btn-outline-danger:hover {
+        background-color: #dc3545;
+        color: white;
+        border-color: #dc3545;
+    }
+
+    .card {
+        border-radius: 12px !important;
+        overflow: hidden;
+    }
+
+    .card-header {
+        padding: 0.75rem 1.25rem;
+    }
+
+    .form-label {
+        font-size: 0.85rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .input-group-text {
+        border: 1px solid #ced4da;
+        border-right: none;
+        background-color: #f8f9fa;
+    }
+
+    .input-group .form-control {
+        border-left: none;
+    }
+
+    .input-group .form-control:focus {
+        border-left: none;
+        box-shadow: none;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const container = document.getElementById('trabajosContainer');
+    const btnAgregar = document.getElementById('btnAgregarTrabajo');
+    const totalSpan = document.getElementById('totalTrabajos');
+    const optionsHtml = document.getElementById('proformaOptionsTemplate').innerHTML;
+
+    function actualizarTotal() {
+        let total = 0;
+        container.querySelectorAll('.valor-input').forEach(function (input) {
+            const v = parseFloat(input.value);
+            if (!isNaN(v)) total += v;
+        });
+        totalSpan.textContent = 'L. ' + total.toFixed(2);
+    }
+
+    function crearFila(data) {
+        data = data || {};
+        const row = document.createElement('div');
+        row.className = 'row g-2 align-items-end trabajo-row mb-3';
+
+        row.innerHTML =
+            '<div class="col-md-5">' +
+            '   <label class="form-label small fw-semibold">Descripción del trabajo</label>' +
+            '   <input type="text" name="trabajo_descripcion[]" class="form-control form-control-sm" placeholder="Ej. Instalación de GPS y FLS">' +
+            '</div>' +
+            '<div class="col-md-2">' +
+            '   <label class="form-label small fw-semibold">Valor (L.)</label>' +
+            '   <input type="number" step="0.01" name="trabajo_valor[]" class="form-control form-control-sm valor-input" placeholder="0.00">' +
+            '</div>' +
+            '<div class="col-md-4">' +
+            '   <label class="form-label small fw-semibold">Proforma asignada</label>' +
+            '   <select name="trabajo_proforma_id[]" class="form-select form-select-sm">' + optionsHtml + '</select>' +
+            '   <div class="mt-1 crear-proforma-slot"></div>' +
+            '</div>' +
+            '<div class="col-md-1 d-flex justify-content-end">' +
+            '   <button type="button" class="btn btn-outline-danger btn-sm btn-quitar-trabajo" title="Quitar este trabajo">' +
+            '       <i class="bi bi-trash"></i>' +
+            '   </button>' +
+            '</div>';
+
+        row.querySelector('input[name="trabajo_descripcion[]"]').value = data.descripcion || '';
+        row.querySelector('input[name="trabajo_valor[]"]').value = data.valor ?? '';
+        if (data.proforma_id) {
+            row.querySelector('select[name="trabajo_proforma_id[]"]').value = data.proforma_id;
+        }
+
+        // "Crear proforma": solo disponible para trabajos que ya están guardados
+        // en la base de datos (tienen un id real). Las filas nuevas que aún no
+        // se han guardado muestran un aviso en su lugar.
+        const slot = row.querySelector('.crear-proforma-slot');
+        if (data.id) {
+            row.dataset.trabajoId = data.id;
+            const link = document.createElement('a');
+            link.href = '<?= base_url('/proformas/crear') ?>?trabajo_id=' + data.id;
+            link.className = 'small text-primary text-decoration-none';
+            link.innerHTML = '<i class="bi bi-plus-circle me-1"></i>Crear proforma';
+            slot.appendChild(link);
+        } else {
+            const aviso = document.createElement('small');
+            aviso.className = 'text-muted';
+            aviso.textContent = 'Guarda la gestión para poder crear la proforma desde aquí';
+            slot.appendChild(aviso);
+        }
+
+        row.querySelector('.btn-quitar-trabajo').addEventListener('click', function () {
+            row.remove();
+            actualizarTotal();
+        });
+
+        row.querySelector('.valor-input').addEventListener('input', actualizarTotal);
+
+        return row;
+    }
+
+    btnAgregar.addEventListener('click', function () {
+        container.appendChild(crearFila());
+    });
+
+    // Cargar trabajos existentes
+    const trabajosExistentes = <?= json_encode(array_map(fn($t) => [
+        'id' => $t['id'],
+        'descripcion' => $t['descripcion'],
+        'valor' => $t['valor'],
+        'proforma_id' => $t['proforma_id'],
+    ], $trabajos), JSON_UNESCAPED_UNICODE) ?>;
+
+    if (trabajosExistentes.length) {
+        trabajosExistentes.forEach(function (t) {
+            container.appendChild(crearFila(t));
+        });
+    } else {
+        container.appendChild(crearFila());
+    }
+
+    actualizarTotal();
+});
+</script>

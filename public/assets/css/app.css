@@ -8,13 +8,6 @@ body {
     font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
 }
 
-/* Evita que el flexbox estire el sidebar a la altura de TODA la página
-   (que puede ser muy larga) — sin esto, "sticky" no tiene efecto porque
-   el sidebar ya mide lo mismo que el contenido completo. */
-#layout-wrapper {
-    align-items: flex-start;
-}
-
 /* ---------- Sidebar ---------- */
 .sidebar {
     width: var(--sidebar-width);
@@ -51,20 +44,72 @@ body {
     border-left-color: var(--brand);
 }
 
-/* El sidebar se comporta como "cajón" (off-canvas) hasta pantallas de 1199px.
-   El botón ☰ lo abre/cierra con un fondo oscuro detrás. */
-@media (max-width: 1199.98px) {
+/* En ESCRITORIO/TABLET (768px o más) el sidebar está siempre visible y
+   fijo, tal como está ahora. El botón ☰ solo alterna entre ancho completo
+   y una franja angosta de solo íconos. */
+.sidebar {
+    position: sticky;
+    top: 0;
+}
+
+.sidebar.sidebar-toggled {
+    width: 76px;
+}
+.sidebar.sidebar-toggled .sidebar-brand-text,
+.sidebar.sidebar-toggled .nav-text {
+    display: none;
+}
+.sidebar.sidebar-toggled .sidebar-brand {
+    justify-content: center;
+}
+.sidebar.sidebar-toggled .sidebar-logo {
+    height: 32px !important;
+}
+.sidebar.sidebar-toggled .nav-link {
+    text-align: center;
+    padding: .65rem .25rem;
+}
+.sidebar.sidebar-toggled .nav-link i {
+    margin-right: 0 !important;
+    font-size: 1.15rem;
+}
+
+/* En CELULAR (menos de 768px, el breakpoint "md" de Bootstrap) un sidebar
+   fijo de 250px se come más de la mitad de la pantalla — ahí sí se
+   comporta como cajón: oculto por defecto, el botón ☰ lo abre encima del
+   contenido con un fondo oscuro detrás, y NO se colapsa a íconos (no hace
+   falta, ya está oculto). */
+@media (max-width: 767.98px) {
     .sidebar {
         position: fixed;
         top: 0;
         left: -100%;
         height: 100vh;
+        width: var(--sidebar-width) !important;
         z-index: 1045;
         transition: left .25s ease-in-out;
     }
-    /* En este rango de pantallas, "sidebar-toggled" = el cajón está ABIERTO */
     .sidebar.sidebar-toggled {
         left: 0;
+        width: var(--sidebar-width) !important;
+    }
+    .sidebar.sidebar-toggled .sidebar-brand-text,
+    .sidebar.sidebar-toggled .nav-text {
+        display: inline;
+    }
+    .sidebar.sidebar-toggled .sidebar-brand {
+        justify-content: flex-start;
+    }
+    .sidebar.sidebar-toggled .sidebar-logo {
+        height: 44px !important;
+    }
+    .sidebar.sidebar-toggled .nav-link {
+        text-align: left;
+        padding: .65rem 1.25rem;
+    }
+    .sidebar.sidebar-toggled .nav-link i {
+        margin-right: .5rem !important;
+        font-size: 1rem;
     }
 
     .sidebar-backdrop {
@@ -75,47 +120,13 @@ body {
         z-index: 1040;
     }
     .sidebar-backdrop.show {
-        display: block;
-    }
-
-    #layout-wrapper > .flex-grow-1 {
-        width: 100%;
-        min-width: 0;
+        display: block !important;
     }
 }
 
-/* A partir de 1200px el sidebar es una columna fija normal, y el botón ☰
-   ahora sirve para COLAPSARLO a una franja angosta de solo íconos. */
-@media (min-width: 1200px) {
-    .sidebar {
-        position: sticky;
-        top: 0;
-        height: 100vh;
-        overflow-y: auto;
-    }
-    .sidebar-backdrop { display: none !important; }
-
-    /* En este rango de pantallas, "sidebar-toggled" = el sidebar está COLAPSADO */
-    .sidebar.sidebar-toggled {
-        width: 76px;
-    }
-    .sidebar.sidebar-toggled .sidebar-brand-text,
-    .sidebar.sidebar-toggled .nav-text {
-        display: none;
-    }
-    .sidebar.sidebar-toggled .sidebar-brand {
-        justify-content: center;
-    }
-    .sidebar.sidebar-toggled .sidebar-logo {
-        height: 32px !important;
-    }
-    .sidebar.sidebar-toggled .nav-link {
-        text-align: center;
-        padding: .65rem .25rem;
-    }
-    .sidebar.sidebar-toggled .nav-link i {
-        margin-right: 0 !important;
-        font-size: 1.15rem;
+@media (min-width: 768px) {
+    .sidebar-backdrop {
+        display: none !important;
     }
 }
 

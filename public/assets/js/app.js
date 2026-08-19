@@ -1,13 +1,49 @@
 document.addEventListener('DOMContentLoaded', function () {
     var btn = document.getElementById('btnToggleSidebar');
     var sidebar = document.getElementById('sidebar');
+    var backdrop = document.getElementById('sidebarBackdrop');
 
-    // El sidebar siempre está visible. El botón ☰ solo alterna entre
-    // ancho completo (con texto) y una franja angosta de solo íconos —
-    // el mismo comportamiento sin importar el tamaño de pantalla.
+    function esCelular() {
+        // Coincide con el breakpoint "md" de Bootstrap (767.98px) usado en app.css
+        return window.innerWidth < 768;
+    }
+
+    // Un solo botón, dos comportamientos según el ancho real de pantalla:
+    // - En celular: abre/cierra el sidebar como cajón, con fondo oscuro detrás.
+    // - En tablet/escritorio: solo colapsa el sidebar a una franja de íconos
+    //   (el sidebar sigue siempre visible, nunca se oculta).
+    function toggleSidebar() {
+        var abriendo = !sidebar.classList.contains('sidebar-toggled');
+        sidebar.classList.toggle('sidebar-toggled');
+
+        if (esCelular()) {
+            if (backdrop) backdrop.classList.toggle('show', abriendo);
+            document.body.style.overflow = abriendo ? 'hidden' : '';
+        }
+    }
+
+    // Solo cierra el cajón en celular (en tablet/escritorio el sidebar
+    // nunca se oculta, así que no hay nada que "cerrar" al navegar).
+    function cerrarSiEsCelular() {
+        if (esCelular()) {
+            sidebar.classList.remove('sidebar-toggled');
+            if (backdrop) backdrop.classList.remove('show');
+            document.body.style.overflow = '';
+        }
+    }
+
     if (btn && sidebar) {
-        btn.addEventListener('click', function () {
-            sidebar.classList.toggle('sidebar-toggled');
+        btn.addEventListener('click', toggleSidebar);
+    }
+
+    if (backdrop) {
+        backdrop.addEventListener('click', cerrarSiEsCelular);
+    }
+
+    // Al elegir una opción del menú en celular, cierra el cajón automáticamente.
+    if (sidebar) {
+        sidebar.querySelectorAll('.nav-link').forEach(function (link) {
+            link.addEventListener('click', cerrarSiEsCelular);
         });
     }
 });

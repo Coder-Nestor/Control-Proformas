@@ -1,4 +1,4 @@
-<?php $badgeEstado = [
+<?php use Core\Auth ;$badgeEstado = [
     'correcta'     => 'bg-success-subtle text-success',
     'pendiente'    => 'bg-warning-subtle text-warning',
     'con_problema' => 'bg-danger-subtle text-danger',
@@ -15,11 +15,14 @@
                 <i class="bi bi-info-circle me-1"></i>Gestión y seguimiento de facturas emitidas
             </p>
         </div>
+
+        <?php if (Auth:: can('facturas.crear')): ?>
         <div class="mt-2 mt-sm-0">
             <a href="<?= base_url('/facturas/crear') ?>" class="btn btn-primary btn-sm rounded-pill px-3">
                 <i class="bi bi-plus-lg me-2"></i>Nueva factura
             </a>
         </div>
+       <?php endif; ?>
     </div>
 
     <!-- Filtros -->

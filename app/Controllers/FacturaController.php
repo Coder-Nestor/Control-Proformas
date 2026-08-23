@@ -61,7 +61,17 @@ class FacturaController extends Controller
         $data['creado_por'] = Auth::id();
 
         $id = Factura::insert($data);
-        Factura::registrarHistorial($id, Auth::id(), 'Creó la factura');
+
+        $facturaCreada = Factura::findConDetalle($id);
+        $descripcionCrear = $facturaCreada
+            ? sprintf(
+                'Creó la factura: N° %s — OCE %s — %s',
+                $facturaCreada['n_factura'] ?: '(sin número)',
+                $facturaCreada['n_oce_interna'] ?: '(sin número)',
+                $facturaCreada['proveedor_nombre'] ?? 'proveedor no especificado'
+              )
+            : 'Creó la factura';
+        Factura::registrarHistorial($id, Auth::id(), $descripcionCrear);
 
         $this->flash('success', 'Factura registrada correctamente.');
         $this->redirect('/facturas/' . $id);
@@ -110,10 +120,29 @@ class FacturaController extends Controller
         $actual = Factura::find($id);
 
         $data = $this->collectFormData();
-        $data['documento_pdf'] = $this->handleUpload('documento_pdf', 'facturas', $actual['documento_pdf'] ?? null);
+
+        $eliminarPdf = $this->input('eliminar_pdf', '0') === '1';
+        if ($eliminarPdf && empty($_FILES['documento_pdf']['name'])) {
+            if (!empty($actual['documento_pdf'])) {
+                @unlink(__DIR__ . '/../../public/uploads/facturas/' . $actual['documento_pdf']);
+            }
+            $data['documento_pdf'] = null;
+        } else {
+            $data['documento_pdf'] = $this->handleUpload('documento_pdf', 'facturas', $actual['documento_pdf'] ?? null);
+        }
 
         Factura::update($id, $data);
-        Factura::registrarHistorial($id, Auth::id(), 'Actualizó los datos de la factura');
+
+        $facturaActualizada = Factura::findConDetalle($id);
+        $descripcionActualizar = $facturaActualizada
+            ? sprintf(
+                'Actualizó los datos de la factura: N° %s — OCE %s — %s',
+                $facturaActualizada['n_factura'] ?: '(sin número)',
+                $facturaActualizada['n_oce_interna'] ?: '(sin número)',
+                $facturaActualizada['proveedor_nombre'] ?? 'proveedor no especificado'
+              )
+            : 'Actualizó los datos de la factura';
+        Factura::registrarHistorial($id, Auth::id(), $descripcionActualizar);
 
         $this->flash('success', 'Factura actualizada correctamente.');
         $this->redirect('/facturas/' . $id);
@@ -124,11 +153,21 @@ class FacturaController extends Controller
         $this->verifyCsrf();
         $id = (int) $params['id'];
 
-        $factura = Factura::find($id);
+        $factura = Factura::findConDetalle($id);
         if ($factura && !empty($factura['documento_pdf'])) {
             @unlink(__DIR__ . '/../../public/uploads/facturas/' . $factura['documento_pdf']);
         }
 
+        $descripcion = $factura
+            ? sprintf(
+                'Eliminó la factura: N° %s — OCE %s — %s',
+                $factura['n_factura'] ?: '(sin número)',
+                $factura['n_oce_interna'] ?: '(sin número)',
+                $factura['proveedor_nombre'] ?? 'proveedor no especificado'
+              )
+            : 'Eliminó la factura';
+
+        Factura::registrarHistorial($id, Auth::id(), $descripcion);
         Factura::delete($id);
 
         $this->flash('success', 'Factura eliminada.');

@@ -1,3 +1,4 @@
+<?php use Core\Auth; ?>
 <div class="container-fluid px-0">
     <!-- Encabezado -->
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
@@ -9,11 +10,13 @@
                 <i class="bi bi-info-circle me-1"></i>Listado de trabajos por proveedor y estado de asignación
             </p>
         </div>
+        <?php if (Auth::can('gestiones.crear')): ?>
         <div class="mt-2 mt-sm-0">
             <a href="<?= base_url('/gestiones/crear') ?>" class="btn btn-primary btn-sm rounded-pill px-3">
                 <i class="bi bi-plus-lg me-2"></i>Nueva gestión
             </a>
         </div>
+        <?php endif; ?>
     </div>
 
     <!-- Filtros mejorados -->
@@ -70,9 +73,11 @@
                 </div>
                 <h6 class="fw-bold text-secondary">No hay gestiones registradas</h6>
                 <p class="text-muted small">Comienza creando tu primera gestión de trabajo</p>
+                <?php if (Auth::can('gestiones.crear')): ?>
                 <a href="<?= base_url('/gestiones/crear') ?>" class="btn btn-primary btn-sm rounded-pill px-4 mt-2">
                     <i class="bi bi-plus-lg me-2"></i>Crear primera gestión
                 </a>
+                <?php endif; ?>
             </div>
         </div>
     <?php else: ?>

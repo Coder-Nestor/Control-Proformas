@@ -13,7 +13,7 @@ use App\Models\Area;
 
 class ProformaController extends Controller
 {
-    private const POR_PAGINA = 10;
+    private const POR_PAGINA = 15;
 
     public function index(): void
     {
@@ -99,7 +99,16 @@ class ProformaController extends Controller
         $data['creado_por'] = Auth::id();
 
         $id = Proforma::insert($data);
-        Proforma::registrarHistorial($id, Auth::id(), 'Creó la proforma');
+
+        $proformaCreada = Proforma::findConDetalle($id);
+        $descripcionCrear = $proformaCreada
+            ? sprintf(
+                'Creó la proforma: %s — %s',
+                $proformaCreada['n_proforma'] ?: '(sin número)',
+                $proformaCreada['proveedor_nombre'] ?? 'proveedor no especificado'
+              )
+            : 'Creó la proforma';
+        Proforma::registrarHistorial($id, Auth::id(), $descripcionCrear);
 
         $this->vincularTrabajo($id, $data);
 
@@ -163,10 +172,28 @@ class ProformaController extends Controller
         $actual = Proforma::find($id);
 
         $data = $this->collectFormData();
-        $data['documento_pdf'] = $this->handleUpload('documento_pdf', 'proformas', $actual['documento_pdf'] ?? null);
+
+        $eliminarPdf = $this->input('eliminar_pdf', '0') === '1';
+        if ($eliminarPdf && empty($_FILES['documento_pdf']['name'])) {
+            if (!empty($actual['documento_pdf'])) {
+                @unlink(__DIR__ . '/../../public/uploads/proformas/' . $actual['documento_pdf']);
+            }
+            $data['documento_pdf'] = null;
+        } else {
+            $data['documento_pdf'] = $this->handleUpload('documento_pdf', 'proformas', $actual['documento_pdf'] ?? null);
+        }
 
         Proforma::update($id, $data);
-        Proforma::registrarHistorial($id, Auth::id(), 'Actualizó los datos de la proforma');
+
+        $proformaActualizada = Proforma::findConDetalle($id);
+        $descripcionActualizar = $proformaActualizada
+            ? sprintf(
+                'Actualizó los datos de la proforma: %s — %s',
+                $proformaActualizada['n_proforma'] ?: '(sin número)',
+                $proformaActualizada['proveedor_nombre'] ?? 'proveedor no especificado'
+              )
+            : 'Actualizó los datos de la proforma';
+        Proforma::registrarHistorial($id, Auth::id(), $descripcionActualizar);
 
         $this->vincularTrabajo($id, $data, true);
 
@@ -179,13 +206,22 @@ class ProformaController extends Controller
         $this->verifyCsrf();
         $id = (int) $params['id'];
 
-        $proforma = Proforma::find($id);
+        $proforma = Proforma::findConDetalle($id);
         if ($proforma && !empty($proforma['documento_pdf'])) {
             @unlink(__DIR__ . '/../../public/uploads/proformas/' . $proforma['documento_pdf']);
         }
 
+        $descripcion = $proforma
+            ? sprintf(
+                'Eliminó la proforma: %s — %s',
+                $proforma['n_proforma'] ?: '(sin número)',
+                $proforma['proveedor_nombre'] ?? 'proveedor no especificado'
+              )
+            : 'Eliminó la proforma';
+
         // Los trabajos que apuntaban a esta proforma quedan "sin asignar" (ON DELETE SET NULL).
         // La OC asociada, si existe, se elimina en cascada (ON DELETE CASCADE).
+        Proforma::registrarHistorial($id, Auth::id(), $descripcion);
         Proforma::delete($id);
 
         $this->flash('success', 'Proforma eliminada. Los trabajos asociados quedaron sin asignar.');

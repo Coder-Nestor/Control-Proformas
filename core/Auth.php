@@ -67,4 +67,28 @@ class Auth
     {
         return in_array(self::role(), $roles, true);
     }
+
+    /**
+     * Chequeo DINÁMICO por permiso (para el sistema de Roles y Permisos).
+     * A diferencia de hasRole() (que compara contra una lista fija de
+     * roles escrita en el código), esto consulta en la base de datos
+     * qué permisos tiene asignado el rol del usuario actual — así se
+     * puede cambiar desde la pantalla de Roles sin tocar código.
+     */
+    public static function can(string $permisoSlug): bool
+    {
+        $rolSlug = self::role();
+        if ($rolSlug === null) {
+            return false;
+        }
+
+        $stmt = Database::connection()->prepare(
+            "SELECT COUNT(*) FROM rol_permisos rp
+             INNER JOIN permisos p ON p.id = rp.permiso_id
+             INNER JOIN roles r ON r.id = rp.rol_id
+             WHERE r.slug = :rol_slug AND p.slug = :permiso_slug"
+        );
+        $stmt->execute(['rol_slug' => $rolSlug, 'permiso_slug' => $permisoSlug]);
+        return (int) $stmt->fetchColumn() > 0;
+    }
 }

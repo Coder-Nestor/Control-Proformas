@@ -11,7 +11,7 @@ use App\Models\Trabajo;
 
 class GestionController extends Controller
 {
-    private const POR_PAGINA = 10;
+    private const POR_PAGINA = 15;
 
     public function index(): void
     {
@@ -35,8 +35,6 @@ class GestionController extends Controller
 
         $gestiones = Gestion::allConDetalle($filtros, $porPagina, $offset);
 
-        // Se cargan los trabajos de todas las gestiones listadas en una sola consulta
-        // (evita N+1) y se agrupan por gestión para pintarlos en la tabla.
         $trabajosPorGestion = [];
         foreach ($gestiones as $g) {
             $trabajosPorGestion[$g['id']] = Trabajo::deGestion((int) $g['id']);
@@ -87,7 +85,16 @@ class GestionController extends Controller
 
         $id = Gestion::insert($data);
         Trabajo::reemplazarDeGestion($id, $this->collectTrabajos());
-        Gestion::registrarHistorial($id, Auth::id(), 'Creó la gestión');
+
+        $gestionCreada = Gestion::findConDetalle($id);
+        $descripcionCrear = $gestionCreada
+            ? sprintf(
+                'Creó la gestión: Cotización %s — %s',
+                $gestionCreada['n_cotizacion'] ?: '(sin número)',
+                $gestionCreada['proveedor_nombre'] ?? 'proveedor no especificado'
+              )
+            : 'Creó la gestión';
+        Gestion::registrarHistorial($id, Auth::id(), $descripcionCrear);
 
         $this->flash('success', 'Gestión registrada correctamente.');
         $this->redirect('/gestiones/' . $id);
@@ -149,11 +156,30 @@ class GestionController extends Controller
             return;
         }
 
-        $data['documento_pdf'] = $this->handleUpload('documento_pdf', 'gestiones', $actual['documento_pdf'] ?? null);
+        // Si el usuario marcó "Eliminar documento actual" y no está subiendo
+        // uno nuevo para reemplazarlo, se borra el PDF que ya estaba guardado.
+        $eliminarPdf = $this->input('eliminar_pdf', '0') === '1';
+        if ($eliminarPdf && empty($_FILES['documento_pdf']['name'])) {
+            if (!empty($actual['documento_pdf'])) {
+                @unlink(__DIR__ . '/../../public/uploads/gestiones/' . $actual['documento_pdf']);
+            }
+            $data['documento_pdf'] = null;
+        } else {
+            $data['documento_pdf'] = $this->handleUpload('documento_pdf', 'gestiones', $actual['documento_pdf'] ?? null);
+        }
 
         Gestion::update($id, $data);
         Trabajo::reemplazarDeGestion($id, $this->collectTrabajos());
-        Gestion::registrarHistorial($id, Auth::id(), 'Actualizó los datos de la gestión');
+
+        $gestionActualizada = Gestion::findConDetalle($id);
+        $descripcionActualizar = $gestionActualizada
+            ? sprintf(
+                'Actualizó los datos de la gestión: Cotización %s — %s',
+                $gestionActualizada['n_cotizacion'] ?: '(sin número)',
+                $gestionActualizada['proveedor_nombre'] ?? 'proveedor no especificado'
+              )
+            : 'Actualizó los datos de la gestión';
+        Gestion::registrarHistorial($id, Auth::id(), $descripcionActualizar);
 
         $this->flash('success', 'Gestión actualizada correctamente.');
         $this->redirect('/gestiones/' . $id);
@@ -164,19 +190,26 @@ class GestionController extends Controller
         $this->verifyCsrf();
         $id = (int) $params['id'];
 
-        $gestion = Gestion::find($id);
+        $gestion = Gestion::findConDetalle($id);
         if ($gestion && !empty($gestion['documento_pdf'])) {
             @unlink(__DIR__ . '/../../public/uploads/gestiones/' . $gestion['documento_pdf']);
         }
 
-        // Los trabajos de esta gestión se eliminan en cascada (ON DELETE CASCADE).
+        $descripcion = $gestion
+            ? sprintf(
+                'Eliminó la gestión: Cotización %s — %s',
+                $gestion['n_cotizacion'] ?: '(sin número)',
+                $gestion['proveedor_nombre'] ?? 'proveedor no especificado'
+              )
+            : 'Eliminó la gestión';
+
+        Gestion::registrarHistorial($id, Auth::id(), $descripcion);
         Gestion::delete($id);
 
         $this->flash('success', 'Gestión eliminada.');
         $this->redirect('/gestiones');
     }
 
-    /** Campos del encabezado de la Gestión (la cotización en sí, sin los trabajos). */
     private function collectFormData(): array
     {
         $campos = [
@@ -197,11 +230,6 @@ class GestionController extends Controller
         return $data;
     }
 
-    /**
-     * Recoge el arreglo de trabajos enviado por el formulario:
-     *   trabajo_descripcion[] , trabajo_valor[] , trabajo_proforma_id[]
-     * Los tres arreglos llegan alineados por índice (misma posición = mismo trabajo).
-     */
     private function collectTrabajos(): array
     {
         $descripciones = $_POST['trabajo_descripcion'] ?? [];

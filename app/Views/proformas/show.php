@@ -1,4 +1,5 @@
 <?php
+use Core\Auth;
 $p = $proforma;
 $dias = days_between($p['fecha_solicitud'], $p['fecha_revision_proforma']);
 $diasEnCurso = $p['fecha_revision_proforma'] === null ? days_since($p['fecha_solicitud']) : null;
@@ -33,10 +34,13 @@ $diasEnCurso = $p['fecha_revision_proforma'] === null ? days_since($p['fecha_sol
                 <?php endif; ?>
             </p>
         </div>
+        <?php if (Auth::can('proformas.editar')): ?>
         <div class="d-flex flex-wrap gap-2 mt-2 mt-sm-0">
             <a href="<?= base_url('/proformas/' . $p['id'] . '/editar') ?>" class="btn btn-primary rounded-pill px-3">
                 <i class="bi bi-pencil me-1"></i> Editar
             </a>
+            <?php endif; ?>
+            <?php if (Auth::can('proformas.eliminar')): ?>
             <form method="POST" action="<?= base_url('/proformas/' . $p['id'] . '/eliminar') ?>" 
                   onsubmit="return confirm('¿Eliminar esta proforma? Los trabajos asociados quedarán sin asignar y la orden de compra vinculada (si existe) se eliminará también. ¿Continuar?');" 
                   class="d-inline">
@@ -45,6 +49,7 @@ $diasEnCurso = $p['fecha_revision_proforma'] === null ? days_since($p['fecha_sol
                     <i class="bi bi-trash me-1"></i> Eliminar
                 </button>
             </form>
+            <?php endif; ?>
             <a href="<?= base_url('/proformas') ?>" class="btn btn-outline-secondary rounded-pill px-3">
                 <i class="bi bi-arrow-left me-1"></i> Volver
             </a>
@@ -143,7 +148,7 @@ $diasEnCurso = $p['fecha_revision_proforma'] === null ? days_since($p['fecha_sol
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-header bg-white border-bottom-0 pt-3 pb-0">
                     <h6 class="fw-bold text-secondary mb-0">
-                        <i class="bi bi-file-earmark-pdf me-2 text-danger"></i>Documento escaneado
+                        <i class="bi bi-file-earmark-pdf me-2 text-danger"></i>Documento
                     </h6>
                 </div>
                 <div class="card-body">
@@ -159,7 +164,7 @@ $diasEnCurso = $p['fecha_revision_proforma'] === null ? days_since($p['fecha_sol
                             <a href="<?= base_url('uploads/proformas/' . e($p['documento_pdf'])) ?>" 
                                target="_blank" 
                                class="btn btn-danger rounded-pill px-4">
-                                <i class="bi bi-eye me-1"></i> Ver PDF
+                                <i class="bi bi-eye me-1"></i> Ver
                             </a>
                         </div>
                     <?php else: ?>

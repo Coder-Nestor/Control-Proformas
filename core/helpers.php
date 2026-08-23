@@ -108,3 +108,57 @@ function current_user_name(): string
 {
     return Auth::name();
 }
+
+/**
+ * En servidores Windows con IIS, un archivo recién creado por PHP a veces
+ * no hereda los permisos de lectura correctos de su carpeta — y el usuario
+ * anónimo de IIS (el que sirve el archivo cuando lo abres por URL) no puede
+ * leerlo, aunque la carpeta sí tenga los permisos bien puestos. Esto corre
+ * "icacls" para dar permiso de lectura explícito a las identidades típicas
+ * de IIS sobre ese archivo o carpeta puntual. En Linux no hace nada.
+ *
+ * Si tu AppPool corre bajo una cuenta de dominio específica (pregúntale a
+ * IT), agrégala en config/config.php -> app.iis_permisos_identidad, por
+ * ejemplo 'TUDOMINIO\\usuario_apppool'.
+ */
+function aplicar_permisos_iis(string $ruta): void
+{
+    if (stripos(PHP_OS, 'WIN') !== 0) {
+        return; // no aplica fuera de Windows
+    }
+    if (!file_exists($ruta)) {
+        return;
+    }
+
+    static $config = null;
+    if ($config === null) {
+        $config = require __DIR__ . '/../config/config.php';
+    }
+
+    $identidades = ['IIS_IUSRS', 'IUSR'];
+    $extra = $config['app']['iis_permisos_identidad'] ?? null;
+    if (!empty($extra)) {
+        $identidades[] = $extra;
+    }
+
+    foreach ($identidades as $identidad) {
+        $cmd = 'icacls ' . escapeshellarg($ruta) . ' /grant ' . escapeshellarg($identidad . ':(OI)(CI)(R,W)') . ' 2>&1';
+        @exec($cmd, $salida, $codigo);
+        if ($codigo !== 0) {
+            // No es fatal: puede que esa identidad no exista en este servidor.
+            // Se sigue intentando con las demás, y se deja registro por si acaso.
+            error_log('[aplicar_permisos_iis] icacls no pudo aplicar "' . $identidad . '" a ' . $ruta . ': ' . implode(' ', $salida));
+        }
+        $salida = [];
+    }
+}
+
+/** true si el nombre de archivo es una imagen (por su extensión), para elegir el ícono correcto en la interfaz. */
+function es_imagen(?string $nombreArchivo): bool
+{
+    if (empty($nombreArchivo)) {
+        return false;
+    }
+    $ext = strtolower(pathinfo($nombreArchivo, PATHINFO_EXTENSION));
+    return in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'], true);
+}

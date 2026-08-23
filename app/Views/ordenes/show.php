@@ -1,10 +1,10 @@
-<?php
+<?php use Core\Auth;
 $o = $oc;
 $badgeClass = ['correcta' => 'success', 'pendiente' => 'warning', 'con_problema' => 'danger'];
 $estados = \App\Models\OrdenCompra::ESTADOS;
 $dias = days_between($o['fecha_revision_proforma'], $o['fecha_envio_oce']);
 $diasEnCurso = $o['fecha_envio_oce'] === null ? days_since($o['fecha_revision_proforma']) : null;
-?>
+?> 
 
 <div class="container-fluid px-0">
     <!-- Encabezado mejorado -->
@@ -34,10 +34,13 @@ $diasEnCurso = $o['fecha_envio_oce'] === null ? days_since($o['fecha_revision_pr
                 <?php endif; ?>
             </p>
         </div>
+        <?php if (Auth::can('ordenes.editar')): ?>
         <div class="d-flex flex-wrap gap-2 mt-2 mt-sm-0">
             <a href="<?= base_url('/ordenes/' . $o['id'] . '/editar') ?>" class="btn btn-primary rounded-pill px-3">
                 <i class="bi bi-pencil me-1"></i> Editar
             </a>
+            <?php endif; ?>
+            <?php if (Auth::can('ordenes.eliminar')): ?>
             <form method="POST" action="<?= base_url('/ordenes/' . $o['id'] . '/eliminar') ?>" 
                   onsubmit="return confirm('¿Eliminar esta orden de compra?');" 
                   class="d-inline">
@@ -46,6 +49,7 @@ $diasEnCurso = $o['fecha_envio_oce'] === null ? days_since($o['fecha_revision_pr
                     <i class="bi bi-trash me-1"></i> Eliminar
                 </button>
             </form>
+            <?php endif; ?>
             <a href="<?= base_url('/ordenes') ?>" class="btn btn-outline-secondary rounded-pill px-3">
                 <i class="bi bi-arrow-left me-1"></i> Volver
             </a>
@@ -144,7 +148,7 @@ $diasEnCurso = $o['fecha_envio_oce'] === null ? days_since($o['fecha_revision_pr
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-header bg-white border-bottom-0 pt-3 pb-0">
                     <h6 class="fw-bold text-secondary mb-0">
-                        <i class="bi bi-file-earmark-pdf me-2 text-danger"></i>Documento escaneado
+                        <i class="bi bi-file-earmark-pdf me-2 text-danger"></i>Documento
                     </h6>
                 </div>
                 <div class="card-body">
@@ -160,7 +164,7 @@ $diasEnCurso = $o['fecha_envio_oce'] === null ? days_since($o['fecha_revision_pr
                             <a href="<?= base_url('uploads/ordenes_compra/' . e($o['documento_pdf'])) ?>" 
                                target="_blank" 
                                class="btn btn-danger rounded-pill px-4">
-                                <i class="bi bi-eye me-1"></i> Ver PDF
+                                <i class="bi bi-eye me-1"></i> Ver
                             </a>
                         </div>
                     <?php else: ?>

@@ -84,7 +84,7 @@ class Controller
         }
 
         if ($file['size'] > 10 * 1024 * 1024) {
-            $this->flash('error', 'El archivo PDF no debe superar 10 MB.');
+            $this->flash('error', 'El archivo no debe superar 10 MB.');
             return $oldFile;
         }
 
@@ -92,21 +92,40 @@ class Controller
         $mime = finfo_file($finfo, $file['tmp_name']);
         finfo_close($finfo);
 
-        if ($mime !== 'application/pdf') {
-            $this->flash('error', 'Solo se permiten archivos en formato PDF.');
+        // Se acepta PDF o imágenes (JPG, PNG, GIF, WEBP) — la extensión final
+        // se decide por el tipo MIME real del archivo, no por su nombre.
+        $extensionesPermitidas = [
+            'application/pdf' => 'pdf',
+            'image/jpeg'       => 'jpg',
+            'image/png'        => 'png',
+            'image/gif'        => 'gif',
+            'image/webp'       => 'webp',
+        ];
+
+        if (!isset($extensionesPermitidas[$mime])) {
+            $this->flash('error', 'Solo se permiten archivos PDF o imágenes (JPG, PNG, GIF, WEBP).');
             return $oldFile;
         }
+        $extension = $extensionesPermitidas[$mime];
 
         $dir = __DIR__ . '/../public/uploads/' . $subdir;
-        if (!is_dir($dir)) {
+        $carpetaNueva = !is_dir($dir);
+        if ($carpetaNueva) {
             mkdir($dir, 0755, true);
+            aplicar_permisos_iis($dir);
         }
 
-        $filename = $subdir . '_' . date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.pdf';
-        if (!move_uploaded_file($file['tmp_name'], $dir . '/' . $filename)) {
+        $filename = $subdir . '_' . date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.' . $extension;
+        $destino = $dir . '/' . $filename;
+
+        if (!move_uploaded_file($file['tmp_name'], $destino)) {
             $this->flash('error', 'No se pudo guardar el archivo en el servidor.');
             return $oldFile;
         }
+
+        // Corrige permisos de lectura en IIS/Windows para que el archivo
+        // recién subido se pueda ver de inmediato (ver core/helpers.php).
+        aplicar_permisos_iis($destino);
 
         // Elimina el archivo anterior, si existía, para no acumular basura.
         if ($oldFile) {

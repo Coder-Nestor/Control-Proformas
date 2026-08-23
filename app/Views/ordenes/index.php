@@ -1,4 +1,7 @@
-<?php $badgeClass = ['correcta' => 'success', 'pendiente' => 'warning', 'con_problema' => 'danger']; ?>
+<?php
+use Core\Auth;
+$badgeClass = ['correcta' => 'success', 'pendiente' => 'warning', 'con_problema' => 'danger'];
+?>
 
 <div class="container-fluid px-0">
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
@@ -10,11 +13,14 @@
                 <i class="bi bi-info-circle me-1"></i>Listado de órdenes de compra y su estado de gestión
             </p>
         </div>
+
+        <?php if (Auth::can('ordenes.crear')): ?>
         <div class="mt-2 mt-sm-0">
             <a href="<?= base_url('/ordenes/crear') ?>" class="btn btn-primary btn-sm rounded-pill px-3">
                 <i class="bi bi-plus-lg me-2"></i>Nueva orden de compra
             </a>
         </div>
+        <?php endif; ?>
     </div>
 
     <div class="card border-0 shadow-sm mb-4">
@@ -55,9 +61,11 @@
                 </div>
                 <h6 class="fw-bold text-secondary">No hay órdenes de compra registradas</h6>
                 <p class="text-muted small">Comienza creando tu primera orden de compra</p>
+                <?php if (Auth::can('ordenes.crear')): ?>
                 <a href="<?= base_url('/ordenes/crear') ?>" class="btn btn-primary btn-sm rounded-pill px-4 mt-2">
                     <i class="bi bi-plus-lg me-2"></i>Crear primera orden de compra
                 </a>
+                <?php endif; ?>
             </div>
         </div>
     <?php else: ?>

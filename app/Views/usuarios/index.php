@@ -1,3 +1,4 @@
+<?php use Core\Auth; ?>
 <div class="container-fluid px-0">
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
         <div>
@@ -8,11 +9,13 @@
                 <i class="bi bi-info-circle me-1"></i>Administra los accesos al sistema
             </p>
         </div>
+        <?php if (Auth::can('usuarios.gestionar')): ?>
         <div class="mt-2 mt-sm-0">
             <a href="<?= base_url('/usuarios/crear') ?>" class="btn btn-primary rounded-pill px-4">
                 <i class="bi bi-person-plus me-2"></i>Nuevo usuario
             </a>
         </div>
+        <?php endif; ?>
     </div>
 
     <?php if (empty($usuarios)): ?>
@@ -21,9 +24,11 @@
                 <i class="bi bi-inbox text-muted" style="font-size: 4rem;"></i>
                 <h5 class="fw-bold text-secondary mt-3">No hay usuarios registrados</h5>
                 <p class="text-muted">Crea el primero con el botón de arriba.</p>
+                <?php if (Auth::can('usuarios.gestionar')): ?>
                 <a href="<?= base_url('/usuarios/crear') ?>" class="btn btn-primary rounded-pill px-4 mt-2">
                     <i class="bi bi-person-plus me-2"></i>Crear primer usuario
                 </a>
+                <?php endif; ?>
             </div>
         </div>
     <?php else: ?>
@@ -64,11 +69,18 @@
                             </td>
                             <td class="text-end pe-3 py-3">
                                 <div class="d-flex justify-content-end gap-1">
-                                    <a href="<?= base_url('/usuarios/' . $u['id'] . '/editar') ?>" class="btn btn-outline-primary btn-sm rounded-pill" title="Editar"><i class="bi bi-pencil"></i></a>
-                                    <form method="POST" action="<?= base_url('/usuarios/' . $u['id'] . '/eliminar') ?>" class="d-inline" onsubmit="return confirm('¿Eliminar este usuario?');">
-                                        <?= csrf_field() ?>
-                                        <button class="btn btn-outline-danger btn-sm rounded-pill" title="Eliminar"><i class="bi bi-trash"></i></button>
-                                    </form>
+                                    <?php if (Auth::can('usuarios.gestionar')): ?>
+                                        <a href="<?= base_url('/usuarios/' . $u['id'] . '/editar') ?>" class="btn btn-outline-primary btn-sm rounded-pill" title="Editar"><i class="bi bi-pencil"></i></a>
+                                    <?php endif; ?>
+                                    <?php if (Auth::can('usuarios.eliminar')): ?>
+                                        <form method="POST" action="<?= base_url('/usuarios/' . $u['id'] . '/eliminar') ?>" class="d-inline" onsubmit="return confirm('¿Eliminar este usuario?');">
+                                            <?= csrf_field() ?>
+                                            <button class="btn btn-outline-danger btn-sm rounded-pill" title="Eliminar"><i class="bi bi-trash"></i></button>
+                                        </form>
+                                    <?php endif; ?>
+                                    <?php if (!Auth::can('usuarios.gestionar') && !Auth::can('usuarios.eliminar')): ?>
+                                        <span class="text-muted small">—</span>
+                                    <?php endif; ?>
                                 </div>
                             </td>
                         </tr>

@@ -1,4 +1,5 @@
 <?php
+use Core\Auth;
 $g = $gestion;
 $dias = days_between($g['fecha_finalizacion_trabajo'], $g['fecha_revision_cotizacion']);
 $diasEnCurso = $g['fecha_revision_cotizacion'] === null ? days_since($g['fecha_finalizacion_trabajo']) : null;
@@ -31,9 +32,12 @@ $totalValor = array_sum(array_map(fn($t) => (float) ($t['valor'] ?? 0), $trabajo
             </p>
         </div>
         <div class="d-flex flex-wrap gap-2 mt-2 mt-sm-0">
+            <?php if (Auth::can('gestiones.editar')): ?>
             <a href="<?= base_url('/gestiones/' . $g['id'] . '/editar') ?>" class="btn btn-primary rounded-pill px-3">
                 <i class="bi bi-pencil me-1"></i> Editar
             </a>
+            <?php endif; ?>
+            <?php if (Auth::can('gestiones.eliminar')): ?>
             <form method="POST" action="<?= base_url('/gestiones/' . $g['id'] . '/eliminar') ?>" 
                   onsubmit="return confirm('¿Eliminar esta gestión y todos sus trabajos? Esta acción no se puede deshacer.');" 
                   class="d-inline">
@@ -42,6 +46,7 @@ $totalValor = array_sum(array_map(fn($t) => (float) ($t['valor'] ?? 0), $trabajo
                     <i class="bi bi-trash me-1"></i> Eliminar
                 </button>
             </form>
+            <?php endif; ?>
             <a href="<?= base_url('/gestiones') ?>" class="btn btn-outline-secondary rounded-pill px-3">
                 <i class="bi bi-arrow-left me-1"></i> Volver
             </a>
@@ -140,7 +145,7 @@ $totalValor = array_sum(array_map(fn($t) => (float) ($t['valor'] ?? 0), $trabajo
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white border-bottom-0 pt-3 pb-0">
                     <h6 class="fw-bold text-secondary mb-0">
-                        <i class="bi bi-file-earmark-pdf me-2 text-danger"></i>Documento escaneado
+                        <i class="bi bi-file-earmark-pdf me-2 text-danger"></i>Documento
                     </h6>
                 </div>
                 <div class="card-body">
@@ -156,7 +161,7 @@ $totalValor = array_sum(array_map(fn($t) => (float) ($t['valor'] ?? 0), $trabajo
                             <a href="<?= base_url('uploads/gestiones/' . e($g['documento_pdf'])) ?>" 
                                target="_blank" 
                                class="btn btn-danger rounded-pill px-4">
-                                <i class="bi bi-eye me-1"></i> Ver PDF
+                                <i class="bi bi-eye me-1"></i> Ver
                             </a>
                         </div>
                     <?php else: ?>
@@ -192,9 +197,11 @@ $totalValor = array_sum(array_map(fn($t) => (float) ($t['valor'] ?? 0), $trabajo
                         <div class="text-center py-4">
                             <i class="bi bi-inbox text-muted" style="font-size: 2rem;"></i>
                             <p class="text-muted mb-0 mt-2">Sin trabajos registrados</p>
+                            <?php if (Auth::can('gestiones.editar')): ?>
                             <a href="<?= base_url('/gestiones/' . $g['id'] . '/editar') ?>" class="btn btn-outline-primary btn-sm rounded-pill mt-2">
                                 <i class="bi bi-plus-lg me-1"></i> Agregar trabajos
                             </a>
+                            <?php endif; ?>
                         </div>
                     <?php else: ?>
                         <div class="list-group list-group-flush">
@@ -223,9 +230,11 @@ $totalValor = array_sum(array_map(fn($t) => (float) ($t['valor'] ?? 0), $trabajo
                             <?php endforeach; ?>
                         </div>
                         <div class="mt-3 text-center">
+                            <?php if (Auth::can('gestiones.editar')): ?>
                             <a href="<?= base_url('/gestiones/' . $g['id'] . '/editar') ?>" class="btn btn-outline-primary btn-sm rounded-pill px-4">
                                 <i class="bi bi-pencil me-1"></i> Gestionar trabajos
                             </a>
+                            <?php endif; ?>
                         </div>
                     <?php endif; ?>
                 </div>

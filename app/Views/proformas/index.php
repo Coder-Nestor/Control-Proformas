@@ -1,3 +1,4 @@
+<?php use Core\Auth; ?>
 <div class="container-fluid px-0">
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
         <div>
@@ -8,11 +9,13 @@
                 <i class="bi bi-info-circle me-1"></i>Listado de proformas registradas en el sistema
             </p>
         </div>
+        <?php if (Auth::can('proformas.crear')): ?>
         <div class="mt-2 mt-sm-0">
             <a href="<?= base_url('/proformas/crear') ?>" class="btn btn-primary btn-sm rounded-pill px-3">
                 <i class="bi bi-plus-lg me-2"></i>Nueva proforma
             </a>
         </div>
+        <?php endif; ?>
     </div>
 
     <div class="card border-0 shadow-sm mb-4">

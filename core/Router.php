@@ -35,7 +35,22 @@ class Router
                         Response::redirect('/login');
                         return;
                     }
-                    if (is_array($roles) && !Auth::hasRole($roles)) {
+
+                    // $roles puede ser:
+                    //  - array de slugs de rol (como siempre, ej. ['administrador','auditoria'])
+                    //  - texto de permiso dinámico (ej. 'gestiones.ver'), validado
+                    //    contra la tabla rol_permisos desde Roles y Permisos
+                    //  - null: cualquier usuario logueado puede entrar (sin
+                    //    restricción de rol ni permiso) — comportamiento original
+                    if (is_array($roles)) {
+                        $autorizado = Auth::hasRole($roles);
+                    } elseif (is_string($roles)) {
+                        $autorizado = Auth::can($roles);
+                    } else {
+                        $autorizado = true;
+                    }
+
+                    if (!$autorizado) {
                         http_response_code(403);
                         require __DIR__ . '/../app/Views/errors/403.php';
                         return;

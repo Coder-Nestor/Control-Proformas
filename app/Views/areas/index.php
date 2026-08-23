@@ -11,7 +11,7 @@
         </div>
     </div>
 
-    <?php if (Auth::hasRole(['administrador'])): ?>
+    <?php if (Auth::can('areas.gestionar')): ?>
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-header bg-white border-bottom-0 pt-3 pb-0">
             <h6 class="fw-bold text-secondary mb-0">
@@ -54,7 +54,7 @@
                         <tr>
                             <th class="fw-semibold text-secondary ps-3 py-3">Nombre</th>
                             <th class="fw-semibold text-secondary py-3">Estado</th>
-                            <?php if (Auth::hasRole(['administrador'])): ?>
+                            <?php if (Auth::can('areas.gestionar') || Auth::can('areas.eliminar')): ?>
                                 <th class="fw-semibold text-secondary text-end pe-3 py-3">Acciones</th>
                             <?php endif; ?>
                         </tr>
@@ -71,9 +71,10 @@
                                     <?= $a['activo'] ? 'Activa' : 'Inactiva' ?>
                                 </span>
                             </td>
-                            <?php if (Auth::hasRole(['administrador'])): ?>
+                            <?php if (Auth::can('areas.gestionar') || Auth::can('areas.eliminar')): ?>
                             <td class="text-end pe-3 py-3">
                                 <div class="d-flex justify-content-end gap-1">
+                                    <?php if (Auth::can('areas.gestionar')): ?>
                                     <button type="button"
                                             class="btn btn-outline-primary btn-sm rounded-pill"
                                             data-bs-toggle="modal"
@@ -92,10 +93,13 @@
                                             <?= $a['activo'] ? 'Desactivar' : 'Activar' ?>
                                         </button>
                                     </form>
+                                    <?php endif; ?>
+                                    <?php if (Auth::can('areas.eliminar')): ?>
                                     <form method="POST" action="<?= base_url('/areas/' . $a['id'] . '/eliminar') ?>" class="d-inline" onsubmit="return confirm('¿Eliminar esta área? Las proformas o usuarios que ya la usaban conservan el nombre, solo se quita del catálogo para futuras selecciones.');">
                                         <?= csrf_field() ?>
                                         <button class="btn btn-outline-danger btn-sm rounded-pill" title="Eliminar"><i class="bi bi-trash"></i></button>
                                     </form>
+                                    <?php endif; ?>
                                 </div>
                             </td>
                             <?php endif; ?>
@@ -114,7 +118,7 @@
     <?php endif; ?>
 </div>
 
-<?php if (Auth::hasRole(['administrador'])): ?>
+<?php if (Auth::can('areas.gestionar')): ?>
 <!-- Modal compartido para editar el nombre de un área -->
 <div class="modal fade" id="modalEditarArea" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">

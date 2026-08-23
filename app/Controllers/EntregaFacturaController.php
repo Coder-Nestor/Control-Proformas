@@ -9,35 +9,15 @@ use App\Models\Factura;
 
 class EntregaFacturaController extends Controller
 {
-    private const POR_PAGINA = 10;
-
     public function index(): void
     {
         $filtros = [
             'buscar' => $this->input('buscar', ''),
         ];
 
-        $paginaActual = max(1, (int) $this->input('pagina', 1));
-        $porPagina    = self::POR_PAGINA;
-
-        $totalRegistros = EntregaFactura::contarConDetalle($filtros);
-        $totalPaginas   = max(1, (int) ceil($totalRegistros / $porPagina));
-
-        if ($paginaActual > $totalPaginas) {
-            $paginaActual = $totalPaginas;
-        }
-
-        $offset = ($paginaActual - 1) * $porPagina;
-
         $this->view('entregas/index', [
-            'entregas'   => EntregaFactura::allConDetalle($filtros, $porPagina, $offset),
-            'filtros'    => $filtros,
-            'paginacion' => [
-                'pagina_actual'   => $paginaActual,
-                'total_paginas'   => $totalPaginas,
-                'total_registros' => $totalRegistros,
-                'por_pagina'      => $porPagina,
-            ],
+            'entregas' => EntregaFactura::allConDetalle($filtros),
+            'filtros'  => $filtros,
         ]);
     }
 
@@ -57,7 +37,17 @@ class EntregaFacturaController extends Controller
         $data['creado_por'] = Auth::id();
 
         $id = EntregaFactura::insert($data);
-        EntregaFactura::registrarHistorial($id, Auth::id(), 'Creó el registro de entrega');
+
+        $entregaCreada = EntregaFactura::findConDetalle($id);
+        $descripcionCrear = $entregaCreada
+            ? sprintf(
+                'Creó el registro de entrega: OCE %s — Proforma %s — %s',
+                $entregaCreada['n_oce_interna'] ?: '(sin número)',
+                $entregaCreada['n_proforma'] ?: '(sin número)',
+                $entregaCreada['proveedor_nombre'] ?? 'proveedor no especificado'
+              )
+            : 'Creó el registro de entrega';
+        EntregaFactura::registrarHistorial($id, Auth::id(), $descripcionCrear);
 
         $this->flash('success', 'Entrega registrada correctamente.');
         $this->redirect('/entregas/' . $id);
@@ -104,10 +94,29 @@ class EntregaFacturaController extends Controller
         $actual = EntregaFactura::find($id);
 
         $data = $this->collectFormData();
-        $data['documento_pdf'] = $this->handleUpload('documento_pdf', 'entregas', $actual['documento_pdf'] ?? null);
+
+        $eliminarPdf = $this->input('eliminar_pdf', '0') === '1';
+        if ($eliminarPdf && empty($_FILES['documento_pdf']['name'])) {
+            if (!empty($actual['documento_pdf'])) {
+                @unlink(__DIR__ . '/../../public/uploads/entregas/' . $actual['documento_pdf']);
+            }
+            $data['documento_pdf'] = null;
+        } else {
+            $data['documento_pdf'] = $this->handleUpload('documento_pdf', 'entregas', $actual['documento_pdf'] ?? null);
+        }
 
         EntregaFactura::update($id, $data);
-        EntregaFactura::registrarHistorial($id, Auth::id(), 'Actualizó los datos de la entrega');
+
+        $entregaActualizada = EntregaFactura::findConDetalle($id);
+        $descripcionActualizar = $entregaActualizada
+            ? sprintf(
+                'Actualizó los datos de la entrega: OCE %s — Proforma %s — %s',
+                $entregaActualizada['n_oce_interna'] ?: '(sin número)',
+                $entregaActualizada['n_proforma'] ?: '(sin número)',
+                $entregaActualizada['proveedor_nombre'] ?? 'proveedor no especificado'
+              )
+            : 'Actualizó los datos de la entrega';
+        EntregaFactura::registrarHistorial($id, Auth::id(), $descripcionActualizar);
 
         $this->flash('success', 'Entrega actualizada correctamente.');
         $this->redirect('/entregas/' . $id);
@@ -118,11 +127,21 @@ class EntregaFacturaController extends Controller
         $this->verifyCsrf();
         $id = (int) $params['id'];
 
-        $entrega = EntregaFactura::find($id);
+        $entrega = EntregaFactura::findConDetalle($id);
         if ($entrega && !empty($entrega['documento_pdf'])) {
             @unlink(__DIR__ . '/../../public/uploads/entregas/' . $entrega['documento_pdf']);
         }
 
+        $descripcion = $entrega
+            ? sprintf(
+                'Eliminó la entrega: OCE %s — Proforma %s — %s',
+                $entrega['n_oce_interna'] ?: '(sin número)',
+                $entrega['n_proforma'] ?: '(sin número)',
+                $entrega['proveedor_nombre'] ?? 'proveedor no especificado'
+              )
+            : 'Eliminó la entrega';
+
+        EntregaFactura::registrarHistorial($id, Auth::id(), $descripcion);
         EntregaFactura::delete($id);
 
         $this->flash('success', 'Entrega eliminada.');

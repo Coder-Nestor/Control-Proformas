@@ -1,4 +1,4 @@
-<?php
+<?php use Core\Auth;
 $e = $entrega;
 $diasRecepcionEntrega = days_between($e['fecha_entrega_factura'], $e['fecha_entrega_dueno']);
 $diasPasarFactura = days_between($e['fecha_entrega_dueno'], $e['fecha_solicitud_revision_pago']);
@@ -25,10 +25,14 @@ $diasPasarFacturaEnCurso = $e['fecha_solicitud_revision_pago'] === null ? days_s
                 <i class="bi bi-file-earmark-check me-1"></i>Proforma <?= e($e['n_proforma'] ?? '—') ?>
             </p>
         </div>
+
+        <?php if(Auth::can('entregas.editar')): ?>
         <div class="d-flex flex-wrap gap-2 mt-2 mt-sm-0">
             <a href="<?= base_url('/entregas/' . $e['id'] . '/editar') ?>" class="btn btn-primary rounded-pill px-3">
                 <i class="bi bi-pencil me-1"></i> Editar
             </a>
+        <?php endif; ?>
+            <?php if(Auth::can('entregas.eliminar')): ?>
             <form method="POST" action="<?= base_url('/entregas/' . $e['id'] . '/eliminar') ?>"
                   onsubmit="return confirm('¿Eliminar este registro de entrega?');"
                   class="d-inline">
@@ -37,6 +41,7 @@ $diasPasarFacturaEnCurso = $e['fecha_solicitud_revision_pago'] === null ? days_s
                     <i class="bi bi-trash me-1"></i> Eliminar
                 </button>
             </form>
+            <?php endif; ?>
             <a href="<?= base_url('/entregas') ?>" class="btn btn-outline-secondary rounded-pill px-3">
                 <i class="bi bi-arrow-left me-1"></i> Volver
             </a>
@@ -139,7 +144,7 @@ $diasPasarFacturaEnCurso = $e['fecha_solicitud_revision_pago'] === null ? days_s
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white border-bottom-0 pt-3 pb-0">
                     <h6 class="fw-bold text-secondary mb-0">
-                        <i class="bi bi-file-earmark-pdf me-2 text-danger"></i>Documento escaneado
+                        <i class="bi bi-file-earmark-pdf me-2 text-danger"></i>Documento
                     </h6>
                 </div>
                 <div class="card-body">
@@ -150,12 +155,12 @@ $diasPasarFacturaEnCurso = $e['fecha_solicitud_revision_pago'] === null ? days_s
                             </div>
                             <div class="flex-grow-1">
                                 <div class="fw-semibold"><?= e($e['documento_pdf']) ?></div>
-                                <small class="text-muted">Documento PDF adjunto</small>
+                                <small class="text-muted">Documento adjunto</small>
                             </div>
                             <a href="<?= base_url('uploads/entregas/' . e($e['documento_pdf'])) ?>"
                                target="_blank"
                                class="btn btn-danger rounded-pill px-4">
-                                <i class="bi bi-eye me-1"></i> Ver PDF
+                                <i class="bi bi-eye me-1"></i> Ver
                             </a>
                         </div>
                     <?php else: ?>

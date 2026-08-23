@@ -102,7 +102,7 @@
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body d-flex align-items-center gap-4 py-4">
                     <div class="bg-success-subtle text-success rounded-3 d-flex align-items-center justify-content-center flex-shrink-0" style="width:64px;height:64px;font-size:1.9rem;">
-                        <i class="bi bi-cash-coin"></i>
+                        <i class="bi bi-cash"></i>
                     </div>
                     <div>
                         <div class="fs-3 fw-bold lh-1"><?= fmt_money($valorTotalCotizado) ?></div>

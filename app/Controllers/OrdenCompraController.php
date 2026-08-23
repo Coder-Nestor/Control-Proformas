@@ -10,8 +10,6 @@ use App\Models\Factura;
 
 class OrdenCompraController extends Controller
 {
-    private const POR_PAGINA = 10;
-
     public function index(): void
     {
         $filtros = [
@@ -19,28 +17,10 @@ class OrdenCompraController extends Controller
             'buscar' => $this->input('buscar', ''),
         ];
 
-        $paginaActual = max(1, (int) $this->input('pagina', 1));
-        $porPagina    = self::POR_PAGINA;
-
-        $totalRegistros = OrdenCompra::contarConDetalle($filtros);
-        $totalPaginas   = max(1, (int) ceil($totalRegistros / $porPagina));
-
-        if ($paginaActual > $totalPaginas) {
-            $paginaActual = $totalPaginas;
-        }
-
-        $offset = ($paginaActual - 1) * $porPagina;
-
         $this->view('ordenes/index', [
-            'ordenes'    => OrdenCompra::allConDetalle($filtros, $porPagina, $offset),
-            'estados'    => OrdenCompra::ESTADOS,
-            'filtros'    => $filtros,
-            'paginacion' => [
-                'pagina_actual'   => $paginaActual,
-                'total_paginas'   => $totalPaginas,
-                'total_registros' => $totalRegistros,
-                'por_pagina'      => $porPagina,
-            ],
+            'ordenes' => OrdenCompra::allConDetalle($filtros),
+            'estados' => OrdenCompra::ESTADOS,
+            'filtros' => $filtros,
         ]);
     }
 
@@ -64,7 +44,17 @@ class OrdenCompraController extends Controller
         $data['creado_por'] = Auth::id();
 
         $id = OrdenCompra::insert($data);
-        OrdenCompra::registrarHistorial($id, Auth::id(), 'Creó la orden de compra');
+
+        $ocCreada = OrdenCompra::findConDetalle($id);
+        $descripcionCrear = $ocCreada
+            ? sprintf(
+                'Creó la orden de compra: N° OCE %s — Proforma %s — %s',
+                $ocCreada['n_oce_interna'] ?: '(sin número)',
+                $ocCreada['n_proforma'] ?: '(sin número)',
+                $ocCreada['proveedor_nombre'] ?? 'proveedor no especificado'
+              )
+            : 'Creó la orden de compra';
+        OrdenCompra::registrarHistorial($id, Auth::id(), $descripcionCrear);
 
         $this->flash('success', 'Orden de compra registrada correctamente.');
         $this->redirect('/ordenes/' . $id);
@@ -113,10 +103,29 @@ class OrdenCompraController extends Controller
         $actual = OrdenCompra::find($id);
 
         $data = $this->collectFormData();
-        $data['documento_pdf'] = $this->handleUpload('documento_pdf', 'ordenes_compra', $actual['documento_pdf'] ?? null);
+
+        $eliminarPdf = $this->input('eliminar_pdf', '0') === '1';
+        if ($eliminarPdf && empty($_FILES['documento_pdf']['name'])) {
+            if (!empty($actual['documento_pdf'])) {
+                @unlink(__DIR__ . '/../../public/uploads/ordenes_compra/' . $actual['documento_pdf']);
+            }
+            $data['documento_pdf'] = null;
+        } else {
+            $data['documento_pdf'] = $this->handleUpload('documento_pdf', 'ordenes_compra', $actual['documento_pdf'] ?? null);
+        }
 
         OrdenCompra::update($id, $data);
-        OrdenCompra::registrarHistorial($id, Auth::id(), 'Actualizó los datos de la orden de compra');
+
+        $ocActualizada = OrdenCompra::findConDetalle($id);
+        $descripcionActualizar = $ocActualizada
+            ? sprintf(
+                'Actualizó los datos de la orden de compra: N° OCE %s — Proforma %s — %s',
+                $ocActualizada['n_oce_interna'] ?: '(sin número)',
+                $ocActualizada['n_proforma'] ?: '(sin número)',
+                $ocActualizada['proveedor_nombre'] ?? 'proveedor no especificado'
+              )
+            : 'Actualizó los datos de la orden de compra';
+        OrdenCompra::registrarHistorial($id, Auth::id(), $descripcionActualizar);
 
         $this->flash('success', 'Orden de compra actualizada correctamente.');
         $this->redirect('/ordenes/' . $id);
@@ -127,11 +136,21 @@ class OrdenCompraController extends Controller
         $this->verifyCsrf();
         $id = (int) $params['id'];
 
-        $oc = OrdenCompra::find($id);
+        $oc = OrdenCompra::findConDetalle($id);
         if ($oc && !empty($oc['documento_pdf'])) {
             @unlink(__DIR__ . '/../../public/uploads/ordenes_compra/' . $oc['documento_pdf']);
         }
 
+        $descripcion = $oc
+            ? sprintf(
+                'Eliminó la orden de compra: N° OCE %s — Proforma %s — %s',
+                $oc['n_oce_interna'] ?: '(sin número)',
+                $oc['n_proforma'] ?: '(sin número)',
+                $oc['proveedor_nombre'] ?? 'proveedor no especificado'
+              )
+            : 'Eliminó la orden de compra';
+
+        OrdenCompra::registrarHistorial($id, Auth::id(), $descripcion);
         OrdenCompra::delete($id);
 
         $this->flash('success', 'Orden de compra eliminada.');

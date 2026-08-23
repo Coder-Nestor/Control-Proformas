@@ -1,4 +1,4 @@
-<?php
+<?php use Core\Auth;
 $f = $factura;
 $badgeClass = ['correcta' => 'success', 'pendiente' => 'warning', 'con_problema' => 'danger'];
 $estados = \App\Models\Factura::ESTADOS;
@@ -37,10 +37,15 @@ $diasEnCurso = $f['fecha_entrega_factura'] === null ? days_since($f['fecha_envio
                 <?php endif; ?>
             </p>
         </div>
+
+        <?php if (Auth:: can('facturas.editar')): ?>
         <div class="d-flex flex-wrap gap-2 mt-2 mt-sm-0">
             <a href="<?= base_url('/facturas/' . $f['id'] . '/editar') ?>" class="btn btn-primary rounded-pill px-3">
                 <i class="bi bi-pencil me-1"></i> Editar
             </a>
+
+        <?php endif; ?>
+        <?php if (Auth:: can('facturas.eliminar')): ?>
             <form method="POST" action="<?= base_url('/facturas/' . $f['id'] . '/eliminar') ?>"
                   onsubmit="return confirm('¿Eliminar esta factura?');"
                   class="d-inline">
@@ -49,6 +54,7 @@ $diasEnCurso = $f['fecha_entrega_factura'] === null ? days_since($f['fecha_envio
                     <i class="bi bi-trash me-1"></i> Eliminar
                 </button>
             </form>
+        <?php endif; ?>
             <a href="<?= base_url('/facturas') ?>" class="btn btn-outline-secondary rounded-pill px-3">
                 <i class="bi bi-arrow-left me-1"></i> Volver
             </a>
@@ -147,7 +153,7 @@ $diasEnCurso = $f['fecha_entrega_factura'] === null ? days_since($f['fecha_envio
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white border-bottom-0 pt-3 pb-0">
                     <h6 class="fw-bold text-secondary mb-0">
-                        <i class="bi bi-file-earmark-pdf me-2 text-danger"></i>Documento escaneado
+                        <i class="bi bi-file-earmark-pdf me-2 text-danger"></i>Documento
                     </h6>
                 </div>
                 <div class="card-body">
@@ -158,12 +164,12 @@ $diasEnCurso = $f['fecha_entrega_factura'] === null ? days_since($f['fecha_envio
                             </div>
                             <div class="flex-grow-1">
                                 <div class="fw-semibold"><?= e($f['documento_pdf']) ?></div>
-                                <small class="text-muted">Documento PDF adjunto</small>
+                                <small class="text-muted">Documento adjunto</small>
                             </div>
                             <a href="<?= base_url('uploads/facturas/' . e($f['documento_pdf'])) ?>"
                                target="_blank"
                                class="btn btn-danger rounded-pill px-4">
-                                <i class="bi bi-eye me-1"></i> Ver PDF
+                                <i class="bi bi-eye me-1"></i> Ver
                             </a>
                         </div>
                     <?php else: ?>

@@ -50,6 +50,31 @@ class RolController extends Controller
         $this->redirect('/roles/' . $id . '/permisos');
     }
 
+    /** Editar el nombre para mostrar de un rol (el identificador/slug no se toca). */
+    public function update(array $params): void
+    {
+        $this->verifyCsrf();
+        $id = (int) $params['id'];
+        $rol = Rol::find($id);
+
+        if (!$rol) {
+            http_response_code(404);
+            $this->view('errors/404_inline', []);
+            return;
+        }
+
+        $nombre = trim((string) $this->input('nombre', ''));
+        if (!$nombre) {
+            $this->flash('error', 'El nombre del rol es obligatorio.');
+            $this->redirect('/roles');
+        }
+
+        Rol::update($id, ['nombre' => $nombre]);
+
+        $this->flash('success', 'Rol actualizado correctamente.');
+        $this->redirect('/roles');
+    }
+
     /** Pantalla de la matriz de permisos (checkboxes) de un rol. */
     public function permisos(array $params): void
     {

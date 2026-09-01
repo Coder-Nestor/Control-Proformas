@@ -48,7 +48,10 @@ $isEdit = !empty($u);
                         </label>
                         <div class="input-group">
                             <span class="input-group-text bg-light"><i class="bi bi-lock"></i></span>
-                            <input type="password" name="password" class="form-control" <?= $isEdit ? '' : 'required' ?> minlength="6" placeholder="Mínimo 6 caracteres">
+                            <input type="password" name="password" id="passwordInput" class="form-control" <?= $isEdit ? '' : 'required' ?> minlength="6" placeholder="Mínimo 6 caracteres">
+                            <button type="button" class="btn btn-outline-secondary" id="btnTogglePassword" tabindex="-1" title="Mostrar contraseña">
+                                <i class="bi bi-eye" id="iconTogglePassword"></i>
+                            </button>
                         </div>
                         <?php if ($isEdit): ?>
                             <small class="text-muted">Deja en blanco si no quieres cambiarla.</small>
@@ -130,3 +133,20 @@ $isEdit = !empty($u);
     .input-group .form-control:focus, .input-group .form-select:focus { border-left: none; box-shadow: none; }
     .btn.rounded-pill { border-radius: 50px !important; }
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const btnToggle = document.getElementById('btnTogglePassword');
+    const passwordInput = document.getElementById('passwordInput');
+    const icon = document.getElementById('iconTogglePassword');
+
+    if (btnToggle && passwordInput && icon) {
+        btnToggle.addEventListener('click', function () {
+            const seVaAMostrar = passwordInput.type === 'password';
+            passwordInput.type = seVaAMostrar ? 'text' : 'password';
+            icon.className = seVaAMostrar ? 'bi bi-eye-slash' : 'bi bi-eye';
+            btnToggle.title = seVaAMostrar ? 'Ocultar contraseña' : 'Mostrar contraseña';
+        });
+    }
+});
+</script>

@@ -8,12 +8,10 @@ class Proforma extends Model
 {
     protected static string $table = 'proformas';
 
-    /** Construye WHERE + params compartidos entre allConDetalle() y contarConDetalle(). */
     private static function construirFiltros(array $filtros): array
     {
-        $where = 'WHERE 1 = 1';
+        $where = 'WHERE p.eliminado_en IS NULL';
         $params = [];
-
         if (!empty($filtros['proveedor_id'])) {
             $where .= ' AND p.proveedor_id = :proveedor_id';
             $params['proveedor_id'] = $filtros['proveedor_id'];
@@ -24,33 +22,26 @@ class Proforma extends Model
             $params['buscar2'] = '%' . $filtros['buscar'] . '%';
         }
         if (!empty($filtros['sin_oc'])) {
-            $where .= ' AND NOT EXISTS (SELECT 1 FROM ordenes_compra oc WHERE oc.proforma_id = p.id)';
+            $where .= ' AND NOT EXISTS (SELECT 1 FROM ordenes_compra oc WHERE oc.proforma_id = p.id AND oc.eliminado_en IS NULL)';
         }
-
         return [$where, $params];
     }
 
-    /**
-     * @param int|null $porPagina Cantidad de resultados por página. Si es null, no pagina (devuelve todo).
-     * @param int|null $offset    Desde qué registro empezar (0 = primero).
-     */
     public static function allConDetalle(array $filtros = [], ?int $porPagina = null, ?int $offset = null): array
     {
         [$where, $params] = self::construirFiltros($filtros);
-
         $sql = "SELECT p.*, pr.nombre AS proveedor_nombre,
-                       (SELECT COUNT(*) FROM trabajos t WHERE t.proforma_id = p.id) AS total_trabajos,
-                       (SELECT GROUP_CONCAT(t.descripcion SEPARATOR ' • ') FROM trabajos t WHERE t.proforma_id = p.id) AS trabajos_desc,
-                       (SELECT COUNT(*) FROM ordenes_compra oc WHERE oc.proforma_id = p.id) AS tiene_oc
+                       (SELECT COUNT(*) FROM trabajos t INNER JOIN gestiones g ON g.id = t.gestion_id WHERE t.proforma_id = p.id AND g.eliminado_en IS NULL) AS total_trabajos,
+                       (SELECT GROUP_CONCAT(t.descripcion SEPARATOR ' • ') FROM trabajos t INNER JOIN gestiones g ON g.id = t.gestion_id WHERE t.proforma_id = p.id AND g.eliminado_en IS NULL) AS trabajos_desc,
+                       (SELECT COUNT(*) FROM ordenes_compra oc WHERE oc.proforma_id = p.id AND oc.eliminado_en IS NULL) AS tiene_oc,
+                       (SELECT oc.n_oce_interna FROM ordenes_compra oc WHERE oc.proforma_id = p.id AND oc.eliminado_en IS NULL LIMIT 1) AS n_oce_interna
                 FROM proformas p
                 LEFT JOIN proveedores pr ON pr.id = p.proveedor_id
                 $where
                 ORDER BY p.id DESC";
-
         if ($porPagina !== null) {
             $sql .= ' LIMIT :limite OFFSET :offset';
         }
-
         $stmt = self::db()->prepare($sql);
         foreach ($params as $key => $value) {
             $stmt->bindValue($key, $value);
@@ -63,11 +54,9 @@ class Proforma extends Model
         return $stmt->fetchAll();
     }
 
-    /** Cuenta cuántas proformas cumplen los filtros, para calcular el total de páginas. */
     public static function contarConDetalle(array $filtros = []): int
     {
         [$where, $params] = self::construirFiltros($filtros);
-
         $stmt = self::db()->prepare("SELECT COUNT(*) FROM proformas p $where");
         $stmt->execute($params);
         return (int) $stmt->fetchColumn();
@@ -79,34 +68,30 @@ class Proforma extends Model
             "SELECT p.*, pr.nombre AS proveedor_nombre
              FROM proformas p
              LEFT JOIN proveedores pr ON pr.id = p.proveedor_id
-             WHERE p.id = :id"
+             WHERE p.id = :id AND p.eliminado_en IS NULL"
         );
         $stmt->execute(['id' => $id]);
         $row = $stmt->fetch();
         return $row ?: null;
     }
 
-    /** Todas las proformas para poblar el <select> de cada trabajo en el formulario de Gestión. */
     public static function paraSelect(): array
     {
-        $stmt = self::db()->query(
-            "SELECT id, n_proforma, fecha_solicitud FROM proformas ORDER BY id DESC"
-        );
+        $stmt = self::db()->query("SELECT id, n_proforma, fecha_solicitud FROM proformas WHERE eliminado_en IS NULL ORDER BY id DESC");
         return $stmt->fetchAll();
     }
 
-    /** Proformas que todavía no tienen una Orden de Compra (para el formulario de OC). */
     public static function sinOrdenDeCompra(?int $incluirId = null): array
     {
         $sql = "SELECT p.*, pr.nombre AS proveedor_nombre
                 FROM proformas p
                 LEFT JOIN proveedores pr ON pr.id = p.proveedor_id
-                WHERE NOT EXISTS (SELECT 1 FROM ordenes_compra oc WHERE oc.proforma_id = p.id)";
+                WHERE p.eliminado_en IS NULL
+                  AND NOT EXISTS (SELECT 1 FROM ordenes_compra oc WHERE oc.proforma_id = p.id AND oc.eliminado_en IS NULL)";
         if ($incluirId) {
             $sql .= ' OR p.id = :id';
         }
         $sql .= ' ORDER BY p.id DESC';
-
         $stmt = self::db()->prepare($sql);
         if ($incluirId) {
             $stmt->execute(['id' => $incluirId]);
@@ -134,5 +119,11 @@ class Proforma extends Model
         );
         $stmt->execute(['id' => $id]);
         return $stmt->fetchAll();
+    }
+
+    public static function softDelete(int $id, ?int $usuarioId): void
+    {
+        $stmt = self::db()->prepare('UPDATE proformas SET eliminado_en = NOW(), eliminado_por = :uid WHERE id = :id');
+        $stmt->execute(['id' => $id, 'uid' => $usuarioId]);
     }
 }

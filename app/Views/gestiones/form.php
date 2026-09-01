@@ -2,6 +2,7 @@
 $g = $gestion ?? [];
 $isEdit = !empty($g['id']);
 $trabajos = $trabajos ?? [];
+$areas = $areas ?? [];
 $val = fn($campo) => e($g[$campo] ?? '');
 ?>
 
@@ -29,6 +30,23 @@ $val = fn($campo) => e($g[$campo] ?? '');
         </div>
         <div class="card-body">
             <div class="row g-3">
+                <div class="col-12 mb-1">
+                    <label class="form-label fw-semibold d-block">Tipo de gestión</label>
+                    <div class="btn-group" role="group" aria-label="Tipo de gestión">
+                        <input type="radio" class="btn-check" name="tipo_gestion" id="tipoCotizacion" value="cotizacion" autocomplete="off">
+                        <label class="btn btn-outline-primary btn-sm" for="tipoCotizacion">
+                            <i class="bi bi-receipt me-1"></i>Cotización
+                        </label>
+
+                        <input type="radio" class="btn-check" name="tipo_gestion" id="tipoMensualidad" value="mensualidad" autocomplete="off">
+                        <label class="btn btn-outline-primary btn-sm" for="tipoMensualidad">
+                            <i class="bi bi-calendar3 me-1"></i>Mensualidad (sin cotización)
+                        </label>
+                    </div>
+                    <small class="text-muted d-block mt-1" id="tipoGestionAyuda">
+                       Registra una gestión con número de cotización.
+                    </small>
+                </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Proveedor <span class="text-danger">*</span></label>
                     <select name="proveedor_id" class="form-select" required>
@@ -38,25 +56,33 @@ $val = fn($campo) => e($g[$campo] ?? '');
                         <?php endforeach; ?>
                     </select>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-6" id="campoNCotizacion">
                     <label class="form-label fw-semibold">N° Cotización</label>
                     <div class="input-group">
                         <span class="input-group-text bg-light"><i class="bi bi-hash"></i></span>
-                        <input type="text" name="n_cotizacion" value="<?= $val('n_cotizacion') ?>" class="form-control" placeholder="Ej. S06603">
+                        <input type="text" name="n_cotizacion" id="inputNCotizacion" value="<?= $val('n_cotizacion') ?>" class="form-control" placeholder="Ej. S06603">
                     </div>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Solicitado por</label>
                     <div class="input-group">
                         <span class="input-group-text bg-light"><i class="bi bi-person"></i></span>
-                        <input type="text" name="solicitado_por" value="<?= $val('solicitado_por') ?>" class="form-control" placeholder="Ej. Aud. Prod. Agrícola">
+                        <select name="solicitado_por" class="form-select">
+                            <option value="">Selecciona un área solicitante...</option>
+                            <?php foreach ($areas as $a): ?>
+                                <option value="<?= e($a['nombre']) ?>" <?= ($g['solicitado_por'] ?? '') === $a['nombre'] ? 'selected' : '' ?>><?= e($a['nombre']) ?></option>
+                            <?php endforeach; ?>
+                            <?php if (!empty($g['solicitado_por']) && !in_array($g['solicitado_por'], array_column($areas, 'nombre'))): ?>
+                                <option value="<?= e($g['solicitado_por']) ?>" selected><?= e($g['solicitado_por']) ?></option>
+                            <?php endif; ?>
+                        </select>
                     </div>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-6" id="campoAprobadoPor">
                     <label class="form-label fw-semibold">Aprobado por</label>
                     <div class="input-group">
                         <span class="input-group-text bg-light"><i class="bi bi-person-check"></i></span>
-                        <input type="text" name="aprobado_por" value="<?= $val('aprobado_por') ?>" class="form-control" placeholder="Nombre del aprobador">
+                        <input type="text" name="aprobado_por" id="inputAprobadoPor" value="<?= $val('aprobado_por') ?>" class="form-control" placeholder="Nombre del aprobador">
                     </div>
                 </div>
             </div>
@@ -136,7 +162,7 @@ $val = fn($campo) => e($g[$campo] ?? '');
                     </div>
                 </div>
                 <div class="form-check mb-3 d-none" id="avisoEliminarPdf">
-                    <input class="form-check-input" type="checkbox" name="eliminar_pdf" value="1" id="eliminarPdfCheckbox" checked>
+                    <input class="form-check-input" type="checkbox" name="eliminar_pdf" value="1" id="eliminarPdfCheckbox">
                     <label class="form-check-label text-danger small" for="eliminarPdfCheckbox">
                         Se eliminará el documento actual al guardar. Si subes un archivo nuevo abajo, se usará ese en su lugar.
                     </label>
@@ -265,6 +291,60 @@ $val = fn($campo) => e($g[$campo] ?? '');
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    // --- Tipo de gestión: Cotización real vs Mensualidad (sin cotización) ---
+    const radioCotizacion = document.getElementById('tipoCotizacion');
+    const radioMensualidad = document.getElementById('tipoMensualidad');
+    const campoNCotizacion = document.getElementById('campoNCotizacion');
+    const inputNCotizacion = document.getElementById('inputNCotizacion');
+    const campoAprobadoPor = document.getElementById('campoAprobadoPor');
+    const inputAprobadoPor = document.getElementById('inputAprobadoPor');
+    const tipoGestionAyuda = document.getElementById('tipoGestionAyuda');
+
+    // Se guarda el valor cada vez que se oculta (no solo una vez al cargar la
+    // página), para que si el usuario escribe algo y luego cambia de modo,
+    // sí se le devuelva lo que había escrito al volver a Cotización real.
+    let valorNCotizacionGuardado = inputNCotizacion.value;
+    let valorAprobadoPorGuardado = inputAprobadoPor.value;
+
+    function aplicarTipoGestion(esMensualidad) {
+        if (esMensualidad) {
+            campoNCotizacion.classList.add('d-none');
+            if (inputNCotizacion.value) valorNCotizacionGuardado = inputNCotizacion.value;
+            inputNCotizacion.value = '';
+            campoAprobadoPor.classList.add('d-none');
+            if (inputAprobadoPor.value) valorAprobadoPorGuardado = inputAprobadoPor.value;
+            inputAprobadoPor.value = '';
+            tipoGestionAyuda.innerHTML = '<i class="bi bi-info-circle me-1"></i>Esta gestión quedará registrada como <strong>Mensualidad</strong>, sin número de cotización. Podrás asociarla a una proforma más adelante, igual que cualquier otro trabajo.';
+        } else {
+            campoNCotizacion.classList.remove('d-none');
+            campoAprobadoPor.classList.remove('d-none');
+            // Si el usuario había escrito una cotización o un aprobador y solo
+            // estaba "probando" el modo mensualidad, se los devolvemos al volver
+            // a Cotización real.
+            if (!inputNCotizacion.value) {
+                inputNCotizacion.value = valorNCotizacionGuardado;
+            }
+            if (!inputAprobadoPor.value) {
+                inputAprobadoPor.value = valorAprobadoPorGuardado;
+            }
+            tipoGestionAyuda.innerHTML = 'Registra una gestión con número de cotización.';
+        }
+    }
+
+    radioCotizacion.addEventListener('change', function () { if (this.checked) aplicarTipoGestion(false); });
+    radioMensualidad.addEventListener('change', function () { if (this.checked) aplicarTipoGestion(true); });
+
+    // Estado inicial: si es una gestión existente SIN cotización, arranca en modo
+    // Mensualidad. En cualquier otro caso (nueva, o ya tiene cotización), Cotización real.
+    const esGestionExistenteSinCotizacion = <?= ($isEdit && empty($g['n_cotizacion'])) ? 'true' : 'false' ?>;
+    if (esGestionExistenteSinCotizacion) {
+        radioMensualidad.checked = true;
+        aplicarTipoGestion(true);
+    } else {
+        radioCotizacion.checked = true;
+        aplicarTipoGestion(false);
+    }
+
     const container = document.getElementById('trabajosContainer');
     const btnAgregar = document.getElementById('btnAgregarTrabajo');
     const totalSpan = document.getElementById('totalTrabajos');

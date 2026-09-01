@@ -7,31 +7,41 @@ $diasPasarFacturaEnCurso = $e['fecha_solicitud_revision_pago'] === null ? days_s
 
 <div class="container-fluid px-0">
     <!-- Encabezado -->
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
         <div>
             <div class="d-flex align-items-center flex-wrap gap-2 mb-1">
                 <h4 class="mb-0 fw-bold text-primary">
-                    <i class="bi bi-truck me-2"></i>Entrega de factura #<?= e($e['n_factura']) ?>
+                    <i class="bi bi-truck me-2"></i>Entrega de factura <?= !empty($e['n_factura']) ? '#' . e($e['n_factura']) : '' ?>
                 </h4>
-                <span class="badge bg-primary-subtle text-primary fw-normal px-3 py-2">
+                <span class="badge bg-primary-subtle text-primary fw-medium px-3 py-2">
                     <i class="bi bi-building me-1"></i><?= e($e['proveedor_nombre'] ?? '—') ?>
                 </span>
-                <span class="badge bg-info-subtle text-info fw-normal px-3 py-2">
-                    <i class="bi bi-upc-scan me-1"></i>OCE <?= e($e['n_oce_interna'] ?? '—') ?>
-                </span>
-
+                <?php if (!empty($e['n_oce_interna'])): ?>
+                    <span class="badge bg-info-subtle text-info-emphasis fw-medium px-3 py-2">
+                        <i class="bi bi-file-text me-1"></i>OCE <?= e($e['n_oce_interna']) ?>
+                    </span>
+                <?php endif; ?>
+                <?php if (!empty($e['n_proforma'])): ?>
+                    <span class="badge bg-success-subtle text-success-emphasis fw-medium px-3 py-2">
+                        <i class="bi bi-file-earmark me-1"></i>Proforma <?= e($e['n_proforma']) ?>
+                    </span>
+                <?php endif; ?>
             </div>
             <p class="text-muted small mb-0">
-                <i class="bi bi-file-earmark-check me-1"></i>Proforma <?= e($e['n_proforma'] ?? '—') ?>
+                <i class="bi bi-calendar3 me-1"></i>
+                Creado: <?= fmt_date($e['creado_en'] ?? date('Y-m-d')) ?>
+                <?php if (!empty($e['actualizado_en'])): ?>
+                    · Actualizado: <?= fmt_date($e['actualizado_en']) ?>
+                <?php endif; ?>
             </p>
         </div>
 
-        <?php if(Auth::can('entregas.editar')): ?>
-        <div class="d-flex flex-wrap gap-2 mt-2 mt-sm-0">
-            <a href="<?= base_url('/entregas/' . $e['id'] . '/editar') ?>" class="btn btn-primary rounded-pill px-3">
+        <div class="d-flex flex-wrap gap-2">
+            <?php if(Auth::can('entregas.editar')): ?>
+            <a href="<?= base_url('/entregas/' . $e['id'] . '/editar') ?>" class="btn btn-primary rounded-pill px-3 shadow-sm">
                 <i class="bi bi-pencil me-1"></i> Editar
             </a>
-        <?php endif; ?>
+            <?php endif; ?>
             <?php if(Auth::can('entregas.eliminar')): ?>
             <form method="POST" action="<?= base_url('/entregas/' . $e['id'] . '/eliminar') ?>"
                   onsubmit="return confirm('¿Eliminar este registro de entrega?');"
@@ -52,46 +62,49 @@ $diasPasarFacturaEnCurso = $e['fecha_solicitud_revision_pago'] === null ? days_s
     <div class="row g-4">
         <!-- Columna izquierda: Detalle y documento -->
         <div class="col-lg-7">
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-white border-bottom-0 pt-3 pb-0">
+            <!-- Tarjeta de detalle -->
+            <div class="card detail-card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
                     <h6 class="fw-bold text-secondary mb-0">
                         <i class="bi bi-info-circle me-2 text-primary"></i>Información detallada
                     </h6>
+                    <span class="badge bg-light text-muted border">Fechas de Entrega</span>
                 </div>
                 <div class="card-body">
+                    <!-- Grid de fechas -->
                     <div class="row g-3">
                         <div class="col-md-4">
-                            <div class="d-flex flex-column gap-2">
-                                <span class="text-muted small">Factura entregada por Ares Sun</span>
-                                <span class="fw-semibold"><?= fmt_date($e['fecha_entrega_factura']) ?></span>
+                            <div class="info-field">
+                                <span class="info-label"><i class="bi bi-calendar-event me-1"></i> Entrega por Proveedor</span>
+                                <span class="info-value"><?= fmt_date($e['fecha_entrega_factura']) ?></span>
                             </div>
                         </div>
                         <div class="col-md-4">
-                            <div class="d-flex flex-column gap-2">
-                                <span class="text-muted small">Entregada al dueño</span>
-                                <span class="fw-semibold"><?= fmt_date($e['fecha_entrega_dueno']) ?></span>
+                            <div class="info-field">
+                                <span class="info-label"><i class="bi bi-person-check me-1"></i> Entregada al dueño</span>
+                                <span class="info-value"><?= fmt_date($e['fecha_entrega_dueno']) ?></span>
                             </div>
                         </div>
                         <div class="col-md-4">
-                            <div class="d-flex flex-column gap-2">
-                                <span class="text-muted small">Solicitud de revisión y pago</span>
-                                <span class="fw-semibold"><?= fmt_date($e['fecha_solicitud_revision_pago']) ?></span>
+                            <div class="info-field">
+                                <span class="info-label"><i class="bi bi-send-check me-1"></i> Solicitud revisión/pago</span>
+                                <span class="info-value"><?= fmt_date($e['fecha_solicitud_revision_pago']) ?></span>
                             </div>
                         </div>
 
                         <!-- Tiempo 1: recepción -> entrega al dueño -->
-                        <div class="col-12">
-                            <div class="bg-light rounded-3 p-3 mt-1">
-                                <div class="d-flex align-items-center gap-3">
-                                    <i class="bi bi-clock-history text-primary" style="font-size: 1.2rem;"></i>
-                                    <div>
-                                        <span class="text-muted small">Tiempo entre recepción (Ares Sun) y entrega al dueño:</span>
+                        <div class="col-12 mt-3">
+                            <div class="info-banner <?= ($diasRecepcionEntrega !== null && $diasRecepcionEntrega > 8) ? 'bg-danger bg-opacity-10 text-danger border border-danger-subtle' : 'bg-light text-dark border' ?>">
+                                <i class="bi bi-clock-history text-primary fs-4"></i>
+                                <div>
+                                    <div class="fw-semibold small">Tiempo entre recepción de factura y entrega al dueño:</div>
+                                    <div class="d-flex align-items-center gap-2 mt-1">
                                         <?php if ($diasRecepcionEntrega !== null): ?>
-                                            <span class="badge <?= $diasRecepcionEntrega > 8 ? 'bg-danger' : 'bg-success' ?> fw-normal px-3 py-2">
-                                                <i class="bi bi-check-circle me-1"></i><?= $diasRecepcionEntrega ?> días
+                                            <span class="badge <?= $diasRecepcionEntrega > 8 ? 'bg-danger' : 'bg-success' ?> px-3 py-1 fs-6">
+                                                <?= $diasRecepcionEntrega ?> días
                                             </span>
                                         <?php else: ?>
-                                            <span class="badge bg-secondary fw-normal px-3 py-2">Sin fechas suficientes</span>
+                                            <span class="badge bg-secondary px-3 py-1">Sin fechas suficientes</span>
                                         <?php endif; ?>
                                     </div>
                                 </div>
@@ -100,39 +113,51 @@ $diasPasarFacturaEnCurso = $e['fecha_solicitud_revision_pago'] === null ? days_s
 
                         <!-- Tiempo 2: para pasar la factura (regla de los 8 días) -->
                         <div class="col-12">
-                            <div class="bg-light rounded-3 p-3">
-                                <div class="d-flex align-items-center gap-3">
-                                    <i class="bi bi-hourglass-split text-primary" style="font-size: 1.2rem;"></i>
+                            <?php if ($diasPasarFactura !== null): ?>
+                                <div class="info-banner <?= $diasPasarFactura > 8 ? 'bg-danger bg-opacity-10 text-danger border border-danger-subtle' : 'bg-success bg-opacity-10 text-success border border-success-subtle' ?>">
+                                    <i class="bi <?= $diasPasarFactura > 8 ? 'bi-exclamation-triangle-fill text-danger' : 'bi-check-circle-fill text-success' ?> fs-4"></i>
                                     <div>
-                                        <span class="text-muted small">Total tiempo para pasar la factura:</span>
-                                        <?php if ($diasPasarFactura !== null): ?>
-                                            <span class="badge <?= $diasPasarFactura > 8 ? 'bg-danger' : 'bg-success' ?> fw-normal px-3 py-2">
-                                                <i class="bi bi-check-circle me-1"></i><?= $diasPasarFactura ?> días
+                                        <div class="fw-semibold small">Total tiempo para pasar la factura:</div>
+                                        <div class="d-flex align-items-center gap-2 mt-1">
+                                            <span class="badge <?= $diasPasarFactura > 8 ? 'bg-danger' : 'bg-success' ?> px-3 py-1 fs-6">
+                                                <?= $diasPasarFactura ?> días
                                             </span>
-                                            <?php if ($diasPasarFactura > 8): ?>
-                                                <div class="text-danger small mt-2"><i class="bi bi-exclamation-triangle me-1"></i>Superó el máximo de 8 días establecido.</div>
-                                            <?php endif; ?>
-                                        <?php elseif ($diasPasarFacturaEnCurso !== null): ?>
-                                            <span class="badge <?= $diasPasarFacturaEnCurso >= 8 ? 'bg-danger' : 'bg-warning text-dark' ?> fw-normal px-3 py-2">
-                                                <i class="bi bi-hourglass-split me-1"></i><?= $diasPasarFacturaEnCurso ?> días transcurridos (aún sin solicitar revisión)
+                                            <span class="small <?= $diasPasarFactura > 8 ? 'text-danger' : 'text-muted' ?>">
+                                                <?= $diasPasarFactura > 8 ? 'Superó el máximo de 8 días establecido' : 'Dentro del plazo máximo de 8 días' ?>
                                             </span>
-                                        <?php else: ?>
-                                            <span class="badge bg-secondary fw-normal px-3 py-2">Sin fechas suficientes</span>
-                                        <?php endif; ?>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            <?php elseif ($diasPasarFacturaEnCurso !== null): ?>
+                                <div class="info-banner <?= $diasPasarFacturaEnCurso >= 8 ? 'bg-danger bg-opacity-10 text-danger border border-danger-subtle' : 'bg-warning bg-opacity-10 text-dark border border-warning-subtle' ?>">
+                                    <i class="bi bi-hourglass-split <?= $diasPasarFacturaEnCurso >= 8 ? 'text-danger' : 'text-warning-emphasis' ?> fs-4"></i>
+                                    <div>
+                                        <div class="fw-semibold small">Tiempo transcurrido (aún sin solicitar revisión):</div>
+                                        <div class="d-flex align-items-center gap-2 mt-1">
+                                            <span class="badge <?= $diasPasarFacturaEnCurso >= 8 ? 'bg-danger' : 'bg-warning text-dark' ?> px-3 py-1 fs-6">
+                                                <?= $diasPasarFacturaEnCurso ?> días
+                                            </span>
+                                            <span class="small text-muted">Aún pendiente de solicitar revisión de pago</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php else: ?>
+                                <div class="info-banner bg-light text-secondary border">
+                                    <i class="bi bi-info-circle text-muted fs-4"></i>
+                                    <div>
+                                        <div class="fw-semibold small">Total tiempo para pasar la factura:</div>
+                                        <span class="small text-muted">Sin fechas suficientes registradas.</span>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
                         </div>
 
+                        <!-- Comentario -->
                         <?php if (!empty($e['comentario'])): ?>
-                            <div class="col-12">
-                                <hr>
-                                <div class="d-flex gap-2">
-                                    <i class="bi bi-chat-dots text-primary mt-1"></i>
-                                    <div>
-                                        <span class="text-muted small d-block">Comentario</span>
-                                        <p class="mb-0"><?= nl2br(e($e['comentario'])) ?></p>
-                                    </div>
+                            <div class="col-12 mt-2">
+                                <div class="comment-box">
+                                    <span class="info-label mb-1 text-primary"><i class="bi bi-chat-left-text me-1"></i> Comentario / Observaciones</span>
+                                    <p class="mb-0 text-dark small"><?= nl2br(e($e['comentario'])) ?></p>
                                 </div>
                             </div>
                         <?php endif; ?>
@@ -141,35 +166,42 @@ $diasPasarFacturaEnCurso = $e['fecha_solicitud_revision_pago'] === null ? days_s
             </div>
 
             <!-- Documento escaneado -->
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white border-bottom-0 pt-3 pb-0">
+            <div class="card detail-card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
                     <h6 class="fw-bold text-secondary mb-0">
-                        <i class="bi bi-file-earmark-pdf me-2 text-danger"></i>Documento
+                        <i class="bi bi-file-earmark-pdf me-2 text-danger"></i>Documento adjunto
                     </h6>
+                    <span class="badge bg-light text-muted border">Archivo</span>
                 </div>
                 <div class="card-body">
                     <?php if (!empty($e['documento_pdf'])): ?>
-                        <div class="d-flex align-items-center gap-3 p-3 bg-light rounded-3">
-                            <div class="bg-danger bg-opacity-10 rounded-3 p-3">
-                                <i class="bi bi-file-earmark-pdf text-danger" style="font-size: 2rem;"></i>
+                        <div class="doc-preview-box">
+                            <div class="doc-icon-wrap bg-danger bg-opacity-10 text-danger">
+                                <i class="bi bi-file-earmark-pdf"></i>
                             </div>
-                            <div class="flex-grow-1">
-                                <div class="fw-semibold"><?= e($e['documento_pdf']) ?></div>
-                                <small class="text-muted">Documento adjunto</small>
+                            <div class="flex-grow-1 overflow-hidden">
+                                <div class="fw-semibold text-truncate text-dark" title="<?= e($e['documento_pdf']) ?>">
+                                    <?= e($e['documento_pdf']) ?>
+                                </div>
+                                <small class="text-muted d-block">Documento adjunto a la entrega</small>
                             </div>
-                            <a href="<?= base_url('uploads/entregas/' . e($e['documento_pdf'])) ?>"
-                               target="_blank"
-                               class="btn btn-danger rounded-pill px-4">
-                                <i class="bi bi-eye me-1"></i> Ver
-                            </a>
+                            <div class="flex-shrink-0">
+                                <a href="<?= base_url('uploads/entregas/' . e($e['documento_pdf'])) ?>"
+                                   target="_blank"
+                                   class="btn btn-danger btn-sm rounded-pill px-3 shadow-sm">
+                                    <i class="bi bi-eye me-1"></i> Ver documento
+                                </a>
+                            </div>
                         </div>
                     <?php else: ?>
                         <div class="text-center py-4">
-                            <i class="bi bi-file-earmark-pdf text-muted" style="font-size: 3rem;"></i>
-                            <p class="text-muted mb-2">No hay documento adjunto</p>
-                            <a href="<?= base_url('/entregas/' . $e['id'] . '/editar') ?>" class="btn btn-outline-primary btn-sm rounded-pill">
+                            <i class="bi bi-file-earmark-arrow-up text-muted" style="font-size: 2.5rem;"></i>
+                            <p class="text-muted mb-2 small mt-2">No hay documento adjunto para esta entrega.</p>
+                            <?php if (Auth::can('entregas.editar')): ?>
+                            <a href="<?= base_url('/entregas/' . $e['id'] . '/editar') ?>" class="btn btn-outline-primary btn-sm rounded-pill px-3">
                                 <i class="bi bi-upload me-1"></i> Subir documento
                             </a>
+                            <?php endif; ?>
                         </div>
                     <?php endif; ?>
                 </div>
@@ -179,57 +211,56 @@ $diasPasarFacturaEnCurso = $e['fecha_solicitud_revision_pago'] === null ? days_s
         <!-- Columna derecha: relaciones e historial -->
         <div class="col-lg-5">
             <!-- Factura relacionada -->
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-white border-bottom-0 pt-3 pb-0">
+            <div class="card detail-card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
                     <h6 class="fw-bold text-secondary mb-0">
-                        <i class="bi bi-receipt me-2 text-primary"></i>Factura relacionada
+                        <i class="bi bi-receipt me-2 text-primary"></i>Factura vinculada
                     </h6>
+                    <span class="badge bg-light text-muted border">Origen</span>
                 </div>
                 <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex justify-content-between align-items-center p-3 bg-light rounded-3 border">
                         <div>
-                            <div class="fw-semibold">
-                                <?= !empty($e['n_factura']) ? 'Factura ' . e($e['n_factura']) : 'OCE ' . e($e['n_oce_interna'] ?? '—') ?>
+                            <div class="fw-semibold text-dark">
+                                <?= !empty($e['n_factura']) ? 'Factura ' . e($e['n_factura']) : 'Factura #' . (int)$e['factura_id'] ?>
                             </div>
-                            <small class="text-muted">OCE <?= e($e['n_oce_interna'] ?? '—') ?> · Proforma <?= e($e['n_proforma'] ?? '—') ?></small>
+                            <small class="text-muted d-block">OCE <?= e($e['n_oce_interna'] ?? '—') ?> · Proforma <?= e($e['n_proforma'] ?? '—') ?></small>
+                            <small class="text-muted"><i class="bi bi-building me-1"></i><?= e($e['proveedor_nombre'] ?? '—') ?></small>
                         </div>
                         <a href="<?= base_url('/facturas/' . $e['factura_id']) ?>" class="btn btn-outline-primary btn-sm rounded-pill px-3">
-                            Ver detalle
+                            <i class="bi bi-eye me-1"></i> Ver detalle
                         </a>
                     </div>
                 </div>
             </div>
 
             <!-- Historial -->
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white border-bottom-0 pt-3 pb-0">
+            <div class="card detail-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
                     <h6 class="fw-bold text-secondary mb-0">
                         <i class="bi bi-clock-history me-2 text-primary"></i>Historial de cambios
                     </h6>
+                    <span class="badge bg-light text-muted border">Auditoría</span>
                 </div>
                 <div class="card-body">
                     <?php if (empty($historial)): ?>
                         <div class="text-center py-4">
-                            <i class="bi bi-clock text-muted" style="font-size: 2rem;"></i>
-                            <p class="text-muted mb-0 mt-2">Sin movimientos registrados</p>
+                            <i class="bi bi-clock text-muted" style="font-size: 2.5rem;"></i>
+                            <p class="text-muted mb-0 small mt-2">Sin movimientos registrados</p>
                         </div>
                     <?php else: ?>
-                        <div class="timeline">
+                        <div class="timeline-modern">
                             <?php foreach ($historial as $h): ?>
-                                <div class="timeline-item pb-3">
-                                    <div class="d-flex gap-3">
-                                        <div class="flex-shrink-0">
-                                            <div class="bg-primary bg-opacity-10 rounded-circle p-2">
-                                                <i class="bi bi-arrow-right-circle text-primary"></i>
-                                            </div>
-                                        </div>
-                                        <div class="flex-grow-1">
-                                            <div class="fw-semibold small"><?= e($h['accion']) ?></div>
-                                            <div class="text-muted small">
-                                                <i class="bi bi-person me-1"></i><?= e($h['usuario_nombre'] ?? 'Sistema') ?>
-                                                <span class="mx-1">·</span>
-                                                <i class="bi bi-clock me-1"></i><?= date('d/m/Y H:i', strtotime($h['creado_en'])) ?>
-                                            </div>
+                                <div class="timeline-modern-item">
+                                    <div class="timeline-modern-node">
+                                        <i class="bi bi-arrow-right-short"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-semibold small text-dark"><?= e($h['accion']) ?></div>
+                                        <div class="text-muted small mt-1">
+                                            <i class="bi bi-person me-1"></i><?= e($h['usuario_nombre'] ?? 'Sistema') ?>
+                                            <span class="mx-1">·</span>
+                                            <i class="bi bi-clock me-1"></i><?= date('d/m/Y H:i', strtotime($h['creado_en'])) ?>
                                         </div>
                                     </div>
                                 </div>
@@ -241,59 +272,3 @@ $diasPasarFacturaEnCurso = $e['fecha_solicitud_revision_pago'] === null ? days_s
         </div>
     </div>
 </div>
-
-<style>
-    .card {
-        border-radius: 12px !important;
-        overflow: hidden;
-        transition: box-shadow 0.2s ease;
-    }
-
-    .card:hover {
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.08) !important;
-    }
-
-    .card-header {
-        padding: 1rem 1.25rem 0.5rem 1.25rem;
-        background-color: transparent;
-        border-bottom: 1px solid rgba(0,0,0,0.05);
-    }
-
-    .card-body {
-        padding: 1.25rem;
-    }
-
-    .badge {
-        font-weight: 500;
-        border-radius: 50px;
-    }
-
-    .btn.rounded-pill {
-        border-radius: 50px !important;
-    }
-
-    .timeline .timeline-item:last-child {
-        padding-bottom: 0 !important;
-    }
-
-    .timeline .timeline-item .bg-primary.bg-opacity-10 {
-        background-color: rgba(13, 110, 253, 0.1) !important;
-        width: 36px;
-        height: 36px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    @media (max-width: 768px) {
-        .d-flex.flex-wrap.gap-2 {
-            gap: 0.5rem !important;
-        }
-
-        .btn.rounded-pill {
-            padding-left: 0.75rem !important;
-            padding-right: 0.75rem !important;
-            font-size: 0.875rem;
-        }
-    }
-</style>

@@ -92,18 +92,20 @@ return [
     ['GET', '/historial', [HistorialController::class, 'index'], 'historial.ver'],
 
     // Usuarios (ya migrado antes)
-    ['GET',  '/usuarios',               [UsuarioController::class, 'index'],  'usuarios.ver'],
-    ['GET',  '/usuarios/crear',         [UsuarioController::class, 'create'], 'usuarios.gestionar'],
-    ['POST', '/usuarios',               [UsuarioController::class, 'store'],  'usuarios.gestionar'],
-    ['GET',  '/usuarios/{id}/editar',   [UsuarioController::class, 'edit'],   'usuarios.gestionar'],
-    ['POST', '/usuarios/{id}',          [UsuarioController::class, 'update'], 'usuarios.gestionar'],
-    ['POST', '/usuarios/{id}/eliminar', [UsuarioController::class, 'destroy'], 'usuarios.eliminar'],
+    ['GET',  '/usuarios',                      [UsuarioController::class, 'index'],        'usuarios.ver'],
+    ['GET',  '/usuarios/crear',                [UsuarioController::class, 'create'],       'usuarios.gestionar'],
+    ['POST', '/usuarios',                      [UsuarioController::class, 'store'],        'usuarios.gestionar'],
+    ['GET',  '/usuarios/{id}/editar',          [UsuarioController::class, 'edit'],         'usuarios.gestionar'],
+    ['POST', '/usuarios/{id}',                 [UsuarioController::class, 'update'],       'usuarios.gestionar'],
+    ['POST', '/usuarios/{id}/toggle-estado',   [UsuarioController::class, 'toggleEstado'], 'usuarios.gestionar'],
+    ['POST', '/usuarios/{id}/eliminar',        [UsuarioController::class, 'destroy'],      'usuarios.eliminar'],
 
 
     //roles
-
+ 
     ['GET',  '/roles',               [RolController::class, 'index'], ['administrador']],
     ['POST', '/roles',               [RolController::class, 'store'], ['administrador']],
+    ['POST', '/roles/{id}',          [RolController::class, 'update'], ['administrador']],
     ['GET',  '/roles/{id}/permisos', [RolController::class, 'permisos'], ['administrador']],
     ['POST', '/roles/{id}/permisos', [RolController::class, 'guardarPermisos'], ['administrador']],
     ['POST', '/roles/{id}/eliminar', [RolController::class, 'destroy'], ['administrador']],

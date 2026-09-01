@@ -8,16 +8,9 @@ class Gestion extends Model
 {
     protected static string $table = 'gestiones';
 
-    /**
-     * Construye la cláusula WHERE y los parámetros compartidos por
-     * allConDetalle() y contarConDetalle(), para no duplicar la lógica
-     * de filtros en dos lugares distintos.
-     *
-     * @return array{0: string, 1: array} [sql_where, params]
-     */
     private static function construirFiltros(array $filtros): array
     {
-        $where = 'WHERE 1 = 1';
+        $where = 'WHERE g.eliminado_en IS NULL';
         $params = [];
 
         if (!empty($filtros['proveedor_id'])) {
@@ -37,10 +30,6 @@ class Gestion extends Model
         return [$where, $params];
     }
 
-    /**
-     * @param int|null $porPagina Cantidad de resultados por página. Si es null, no pagina (devuelve todo).
-     * @param int|null $offset    Desde qué registro empezar (0 = primero).
-     */
     public static function allConDetalle(array $filtros = [], ?int $porPagina = null, ?int $offset = null): array
     {
         [$where, $params] = self::construirFiltros($filtros);
@@ -69,30 +58,54 @@ class Gestion extends Model
         return $stmt->fetchAll();
     }
 
-    /** Cuenta cuántas gestiones cumplen los filtros, para calcular el total de páginas. */
     public static function contarConDetalle(array $filtros = []): int
     {
         [$where, $params] = self::construirFiltros($filtros);
-
         $stmt = self::db()->prepare("SELECT COUNT(*) FROM gestiones g $where");
         $stmt->execute($params);
         return (int) $stmt->fetchColumn();
     }
 
-    /** Verifica si un N° de Cotización ya existe en otra gestión (para evitar duplicados). */
     public static function numeroCotizacionExiste(string $numero, ?int $excludeId = null): bool
     {
-        $sql = 'SELECT COUNT(*) FROM gestiones WHERE n_cotizacion = :numero';
+        $sql = 'SELECT COUNT(*) FROM gestiones WHERE n_cotizacion = :numero AND eliminado_en IS NULL';
         $params = ['numero' => $numero];
-
         if ($excludeId !== null) {
             $sql .= ' AND id != :id';
             $params['id'] = $excludeId;
         }
-
         $stmt = self::db()->prepare($sql);
         $stmt->execute($params);
         return (int) $stmt->fetchColumn() > 0;
+    }
+
+    /**
+     * Solo devuelve cotizaciones de proveedores habilitados para pasar a
+     * Proforma (pr.habilitado_proforma = 1) — así el buscador en el
+     * formulario de Proforma nunca ofrece una cotización de un proveedor
+     * que debe quedarse encerrado en Gestiones.
+     */
+    public static function cotizacionesDisponibles(?int $incluirProformaId = null): array
+    {
+        $sql = "SELECT g.n_cotizacion, g.id AS gestion_id, g.proveedor_id, pr.nombre AS proveedor_nombre, g.solicitado_por,
+                       COUNT(t.id) AS total_trabajos,
+                       SUM(CASE WHEN t.proforma_id IS NULL OR (:pid1 IS NOT NULL AND t.proforma_id = :pid2) THEN 1 ELSE 0 END) AS trabajos_sin_asignar
+                FROM gestiones g
+                INNER JOIN trabajos t ON t.gestion_id = g.id
+                INNER JOIN proveedores pr ON pr.id = g.proveedor_id
+                WHERE g.n_cotizacion IS NOT NULL 
+                  AND TRIM(g.n_cotizacion) != '' 
+                  AND g.eliminado_en IS NULL
+                  AND pr.habilitado_proforma = 1
+                GROUP BY g.id, g.n_cotizacion, g.proveedor_id, pr.nombre, g.solicitado_por
+                HAVING trabajos_sin_asignar > 0
+                ORDER BY g.n_cotizacion ASC";
+        $stmt = self::db()->prepare($sql);
+        $stmt->execute([
+            'pid1' => $incluirProformaId,
+            'pid2' => $incluirProformaId,
+        ]);
+        return $stmt->fetchAll();
     }
 
     public static function findConDetalle(int $id): ?array
@@ -101,7 +114,7 @@ class Gestion extends Model
             "SELECT g.*, pr.nombre AS proveedor_nombre
              FROM gestiones g
              LEFT JOIN proveedores pr ON pr.id = g.proveedor_id
-             WHERE g.id = :id"
+             WHERE g.id = :id AND g.eliminado_en IS NULL"
         );
         $stmt->execute(['id' => $id]);
         $row = $stmt->fetch();
@@ -114,12 +127,11 @@ class Gestion extends Model
             "SELECT COUNT(DISTINCT g.id)
              FROM gestiones g
              INNER JOIN trabajos t ON t.gestion_id = g.id
-             WHERE t.proforma_id IS NULL"
+             WHERE t.proforma_id IS NULL AND g.eliminado_en IS NULL"
         );
         return (int) $stmt->fetchColumn();
     }
 
-    /** Gestiones sin revisar cuya cotización lleva más de $umbral días desde que finalizó el trabajo. */
     public static function atrasadas(int $umbralDias): array
     {
         $stmt = self::db()->prepare(
@@ -129,6 +141,7 @@ class Gestion extends Model
              LEFT JOIN proveedores pr ON pr.id = g.proveedor_id
              WHERE g.fecha_finalizacion_trabajo IS NOT NULL
                AND g.fecha_revision_cotizacion IS NULL
+               AND g.eliminado_en IS NULL
                AND DATEDIFF(CURDATE(), g.fecha_finalizacion_trabajo) >= :umbral
              ORDER BY dias_transcurridos DESC"
         );
@@ -144,6 +157,7 @@ class Gestion extends Model
              FROM trabajos t
              INNER JOIN gestiones g ON g.id = t.gestion_id
              INNER JOIN proveedores pr ON pr.id = g.proveedor_id
+             WHERE g.eliminado_en IS NULL
              GROUP BY pr.id, pr.nombre
              ORDER BY total DESC
              LIMIT :lim"
@@ -159,6 +173,7 @@ class Gestion extends Model
             "SELECT DATE_FORMAT(created_at, '%Y-%m') AS mes, COUNT(*) AS total
              FROM gestiones
              WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL :meses MONTH)
+               AND eliminado_en IS NULL
              GROUP BY mes
              ORDER BY mes"
         );
@@ -185,5 +200,11 @@ class Gestion extends Model
         );
         $stmt->execute(['id' => $id]);
         return $stmt->fetchAll();
+    }
+
+    public static function softDelete(int $id, ?int $usuarioId): void
+    {
+        $stmt = self::db()->prepare('UPDATE gestiones SET eliminado_en = NOW(), eliminado_por = :uid WHERE id = :id');
+        $stmt->execute(['id' => $id, 'uid' => $usuarioId]);
     }
 }

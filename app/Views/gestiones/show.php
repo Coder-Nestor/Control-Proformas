@@ -7,19 +7,23 @@ $totalValor = array_sum(array_map(fn($t) => (float) ($t['valor'] ?? 0), $trabajo
 ?>
 
 <div class="container-fluid px-0">
-    <!-- Encabezado mejorado -->
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <!-- Encabezado -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
         <div>
-            <div class="d-flex align-items-center gap-2 mb-1">
+            <div class="d-flex align-items-center flex-wrap gap-2 mb-1">
                 <h4 class="mb-0 fw-bold text-primary">
                     <i class="bi bi-clipboard-check me-2"></i>Gestión #<?= (int) $g['id'] ?>
                 </h4>
-                <span class="badge bg-primary-subtle text-primary fw-normal px-3 py-2">
+                <span class="badge bg-primary-subtle text-primary fw-medium px-3 py-2">
                     <i class="bi bi-building me-1"></i><?= e($g['proveedor_nombre'] ?? '—') ?>
                 </span>
                 <?php if (!empty($g['n_cotizacion'])): ?>
-                    <span class="badge bg-info-subtle text-info fw-normal px-3 py-2">
-                        <i class="bi bi-file-text me-1"></i><?= e($g['n_cotizacion']) ?>
+                    <span class="badge bg-info-subtle text-info-emphasis fw-medium px-3 py-2">
+                        <i class="bi bi-file-text me-1"></i>Cotización <?= e($g['n_cotizacion']) ?>
+                    </span>
+                <?php else: ?>
+                    <span class="badge bg-secondary-subtle text-secondary fw-medium px-3 py-2">
+                        <i class="bi bi-calendar-month me-1"></i>Mensualidad
                     </span>
                 <?php endif; ?>
             </div>
@@ -31,9 +35,9 @@ $totalValor = array_sum(array_map(fn($t) => (float) ($t['valor'] ?? 0), $trabajo
                 <?php endif; ?>
             </p>
         </div>
-        <div class="d-flex flex-wrap gap-2 mt-2 mt-sm-0">
+        <div class="d-flex flex-wrap gap-2">
             <?php if (Auth::can('gestiones.editar')): ?>
-            <a href="<?= base_url('/gestiones/' . $g['id'] . '/editar') ?>" class="btn btn-primary rounded-pill px-3">
+            <a href="<?= base_url('/gestiones/' . $g['id'] . '/editar') ?>" class="btn btn-primary rounded-pill px-3 shadow-sm">
                 <i class="bi bi-pencil me-1"></i> Editar
             </a>
             <?php endif; ?>
@@ -58,82 +62,98 @@ $totalValor = array_sum(array_map(fn($t) => (float) ($t['valor'] ?? 0), $trabajo
         <!-- Columna izquierda: Detalle y documento -->
         <div class="col-lg-7">
             <!-- Tarjeta de detalle -->
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-white border-bottom-0 pt-3 pb-0">
+            <div class="card detail-card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
                     <h6 class="fw-bold text-secondary mb-0">
                         <i class="bi bi-info-circle me-2 text-primary"></i>Información detallada
                     </h6>
+                    <span class="badge bg-light text-muted border">Detalles</span>
                 </div>
                 <div class="card-body">
+                    <!-- Grid ordenado de 6 campos -->
                     <div class="row g-3">
-                        <!-- Columna izquierda de datos -->
-                        <div class="col-md-6">
-                            <div class="d-flex flex-column gap-2">
-                                <div class="d-flex justify-content-between border-bottom pb-1">
-                                    <span class="text-muted small">Solicitado por</span>
-                                    <span class="fw-semibold"><?= e($g['solicitado_por'] ?? '—') ?></span>
-                                </div>
-                                <div class="d-flex justify-content-between border-bottom pb-1">
-                                    <span class="text-muted small">Aprobado por</span>
-                                    <span class="fw-semibold"><?= e($g['aprobado_por'] ?? '—') ?></span>
-                                </div>
-                                <div class="d-flex justify-content-between border-bottom pb-1">
-                                    <span class="text-muted small">N° Cotización</span>
-                                    <span class="fw-semibold"><?= e($g['n_cotizacion'] ?? '—') ?></span>
-                                </div>
+                        <div class="col-sm-6 col-md-4">
+                            <div class="info-field">
+                                <span class="info-label"><i class="bi bi-person me-1"></i> Solicitado por</span>
+                                <span class="info-value"><?= e($g['solicitado_por'] ?? '—') ?></span>
                             </div>
                         </div>
-                        <!-- Columna derecha de datos -->
-                        <div class="col-md-6">
-                            <div class="d-flex flex-column gap-2">
-                                <div class="d-flex justify-content-between border-bottom pb-1">
-                                    <span class="text-muted small">Aprobación ACHSA</span>
-                                    <span class="fw-semibold"><?= fmt_date($g['fecha_aprobacion_trabajo']) ?></span>
-                                </div>
-                                <div class="d-flex justify-content-between border-bottom pb-1">
-                                    <span class="text-muted small">Finalización HELIOS</span>
-                                    <span class="fw-semibold"><?= fmt_date($g['fecha_finalizacion_trabajo']) ?></span>
-                                </div>
-                                <div class="d-flex justify-content-between border-bottom pb-1">
-                                    <span class="text-muted small">Revisión para facturar</span>
-                                    <span class="fw-semibold"><?= fmt_date($g['fecha_revision_cotizacion']) ?></span>
-                                </div>
+                        <div class="col-sm-6 col-md-4">
+                            <div class="info-field">
+                                <span class="info-label"><i class="bi bi-person-check me-1"></i> Aprobado por</span>
+                                <span class="info-value"><?= e($g['aprobado_por'] ?? '—') ?></span>
                             </div>
                         </div>
-                        
-                        <!-- Tiempo transcurrido (full width) -->
-                        <div class="col-12">
-                            <div class="bg-light rounded-3 p-3 mt-1">
-                                <div class="d-flex align-items-center gap-3">
-                                    <i class="bi bi-clock-history text-primary" style="font-size: 1.2rem;"></i>
+                        <div class="col-sm-6 col-md-4">
+                            <div class="info-field">
+                                <span class="info-label"><i class="bi bi-hash me-1"></i> N° Cotización</span>
+                                <span class="info-value"><?= e($g['n_cotizacion'] ?? '—') ?></span>
+                            </div>
+                        </div>
+                        <div class="col-sm-6 col-md-4">
+                            <div class="info-field">
+                                <span class="info-label"><i class="bi bi-calendar-check me-1"></i> Aprobación ACHSA</span>
+                                <span class="info-value"><?= fmt_date($g['fecha_aprobacion_trabajo']) ?></span>
+                            </div>
+                        </div>
+                        <div class="col-sm-6 col-md-4">
+                            <div class="info-field">
+                                <span class="info-label"><i class="bi bi-calendar2-check me-1"></i> Finalización HELIOS</span>
+                                <span class="info-value"><?= fmt_date($g['fecha_finalizacion_trabajo']) ?></span>
+                            </div>
+                        </div>
+                        <div class="col-sm-6 col-md-4">
+                            <div class="info-field">
+                                <span class="info-label"><i class="bi bi-calendar-event me-1"></i> Revisión facturar</span>
+                                <span class="info-value"><?= fmt_date($g['fecha_revision_cotizacion']) ?></span>
+                            </div>
+                        </div>
+
+                        <!-- Banner de tiempo transcurrido -->
+                        <div class="col-12 mt-3">
+                            <?php if ($dias !== null): ?>
+                                <div class="info-banner <?= $dias > 15 ? 'bg-danger bg-opacity-10 text-danger border border-danger-subtle' : 'bg-success bg-opacity-10 text-success border border-success-subtle' ?>">
+                                    <i class="bi <?= $dias > 15 ? 'bi-exclamation-triangle-fill text-danger' : 'bi-check-circle-fill text-success' ?> fs-4"></i>
                                     <div>
-                                        <span class="text-muted small">Tiempo transcurrido:</span>
-                                        <?php if ($dias !== null): ?>
-                                            <span class="badge <?= $dias > 15 ? 'bg-danger' : 'bg-success' ?> fw-normal px-3 py-2">
-                                                <i class="bi bi-check-circle me-1"></i><?= $dias ?> días (finalizado → revisado)
+                                        <div class="fw-semibold small">Tiempo transcurrido (Finalizado → Revisado):</div>
+                                        <div class="d-flex align-items-center gap-2 mt-1">
+                                            <span class="badge <?= $dias > 15 ? 'bg-danger' : 'bg-success' ?> px-3 py-1 fs-6">
+                                                <?= $dias ?> días
                                             </span>
-                                        <?php elseif ($diasEnCurso !== null): ?>
-                                            <span class="badge <?= $diasEnCurso > 15 ? 'bg-warning text-dark' : 'bg-warning text-dark' ?> fw-normal px-3 py-2">
-                                                <i class="bi bi-hourglass-split me-1"></i><?= $diasEnCurso ?> días sin revisar
-                                            </span>
-                                        <?php else: ?>
-                                            <span class="badge bg-secondary fw-normal px-3 py-2">Sin fecha finalización</span>
-                                        <?php endif; ?>
+                                            <span class="small text-muted"><?= $dias > 15 ? 'Superó el plazo esperado de 15 días' : 'Dentro del plazo establecido' ?></span>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            <?php elseif ($diasEnCurso !== null): ?>
+                                <div class="info-banner <?= $diasEnCurso > 15 ? 'bg-danger bg-opacity-10 text-danger border border-danger-subtle' : 'bg-warning bg-opacity-10 text-dark border border-warning-subtle' ?>">
+                                    <i class="bi bi-hourglass-split <?= $diasEnCurso > 15 ? 'text-danger' : 'text-warning-emphasis' ?> fs-4"></i>
+                                    <div>
+                                        <div class="fw-semibold small">Tiempo en curso sin revisar:</div>
+                                        <div class="d-flex align-items-center gap-2 mt-1">
+                                            <span class="badge <?= $diasEnCurso > 15 ? 'bg-danger' : 'bg-warning text-dark' ?> px-3 py-1 fs-6">
+                                                <?= $diasEnCurso ?> días transcurridos
+                                            </span>
+                                            <span class="small text-muted">Aún sin fecha de revisión para facturar</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php else: ?>
+                                <div class="info-banner bg-light text-secondary border">
+                                    <i class="bi bi-info-circle text-muted fs-4"></i>
+                                    <div>
+                                        <div class="fw-semibold small">Tiempo transcurrido:</div>
+                                        <span class="small text-muted">Pendiente de registrar fecha de finalización.</span>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
                         </div>
 
                         <!-- Comentario -->
                         <?php if (!empty($g['comentario'])): ?>
-                            <div class="col-12">
-                                <hr>
-                                <div class="d-flex gap-2">
-                                    <i class="bi bi-chat-dots text-primary mt-1"></i>
-                                    <div>
-                                        <span class="text-muted small d-block">Comentario</span>
-                                        <p class="mb-0"><?= nl2br(e($g['comentario'])) ?></p>
-                                    </div>
+                            <div class="col-12 mt-2">
+                                <div class="comment-box">
+                                    <span class="info-label mb-1 text-primary"><i class="bi bi-chat-left-text me-1"></i> Comentario / Observaciones</span>
+                                    <p class="mb-0 text-dark small"><?= nl2br(e($g['comentario'])) ?></p>
                                 </div>
                             </div>
                         <?php endif; ?>
@@ -142,35 +162,42 @@ $totalValor = array_sum(array_map(fn($t) => (float) ($t['valor'] ?? 0), $trabajo
             </div>
 
             <!-- Tarjeta de documento -->
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white border-bottom-0 pt-3 pb-0">
+            <div class="card detail-card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
                     <h6 class="fw-bold text-secondary mb-0">
-                        <i class="bi bi-file-earmark-pdf me-2 text-danger"></i>Documento
+                        <i class="bi bi-file-earmark-pdf me-2 text-danger"></i>Documento adjunto
                     </h6>
+                    <span class="badge bg-light text-muted border">Archivo</span>
                 </div>
                 <div class="card-body">
                     <?php if (!empty($g['documento_pdf'])): ?>
-                        <div class="d-flex align-items-center gap-3 p-3 bg-light rounded-3">
-                            <div class="bg-danger bg-opacity-10 rounded-3 p-3">
-                                <i class="bi bi-file-earmark-pdf text-danger" style="font-size: 2rem;"></i>
+                        <div class="doc-preview-box">
+                            <div class="doc-icon-wrap bg-danger bg-opacity-10 text-danger">
+                                <i class="bi bi-file-earmark-pdf"></i>
                             </div>
-                            <div class="flex-grow-1">
-                                <div class="fw-semibold"><?= e($g['documento_pdf']) ?></div>
-                                <small class="text-muted">Documento PDF adjunto</small>
+                            <div class="flex-grow-1 overflow-hidden">
+                                <div class="fw-semibold text-truncate text-dark" title="<?= e($g['documento_pdf']) ?>">
+                                    <?= e($g['documento_pdf']) ?>
+                                </div>
+                                <small class="text-muted d-block">Documento PDF adjunto a la gestión</small>
                             </div>
-                            <a href="<?= base_url('uploads/gestiones/' . e($g['documento_pdf'])) ?>" 
-                               target="_blank" 
-                               class="btn btn-danger rounded-pill px-4">
-                                <i class="bi bi-eye me-1"></i> Ver
-                            </a>
+                            <div class="flex-shrink-0 d-flex gap-2">
+                                <a href="<?= base_url('uploads/gestiones/' . e($g['documento_pdf'])) ?>" 
+                                   target="_blank" 
+                                   class="btn btn-danger btn-sm rounded-pill px-3 shadow-sm">
+                                    <i class="bi bi-eye me-1"></i> Ver documento
+                                </a>
+                            </div>
                         </div>
                     <?php else: ?>
                         <div class="text-center py-4">
-                            <i class="bi bi-file-earmark-pdf text-muted" style="font-size: 3rem;"></i>
-                            <p class="text-muted mb-2">No hay documento adjunto</p>
-                            <a href="<?= base_url('/gestiones/' . $g['id'] . '/editar') ?>" class="btn btn-outline-primary btn-sm rounded-pill">
+                            <i class="bi bi-file-earmark-arrow-up text-muted" style="font-size: 2.5rem;"></i>
+                            <p class="text-muted mb-2 small mt-2">No hay documento adjunto para esta gestión.</p>
+                            <?php if (Auth::can('gestiones.editar')): ?>
+                            <a href="<?= base_url('/gestiones/' . $g['id'] . '/editar') ?>" class="btn btn-outline-primary btn-sm rounded-pill px-3">
                                 <i class="bi bi-upload me-1"></i> Subir documento
                             </a>
+                            <?php endif; ?>
                         </div>
                     <?php endif; ?>
                 </div>
@@ -180,48 +207,53 @@ $totalValor = array_sum(array_map(fn($t) => (float) ($t['valor'] ?? 0), $trabajo
         <!-- Columna derecha: Trabajos y historial -->
         <div class="col-lg-5">
             <!-- Tarjeta de trabajos -->
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-white border-bottom-0 pt-3 pb-0">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h6 class="fw-bold text-secondary mb-0">
-                            <i class="bi bi-list-task me-2 text-primary"></i>Trabajos
-                            <span class="badge bg-primary bg-opacity-10 text-primary fw-normal ms-1"><?= count($trabajos) ?></span>
-                        </h6>
-                        <span class="fw-bold text-success">
-                            <i class="bi bi-cash me-1"></i><?= fmt_money($totalValor) ?>
-                        </span>
-                    </div>
+            <div class="card detail-card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6 class="fw-bold text-secondary mb-0">
+                        <i class="bi bi-list-task me-2 text-primary"></i>Trabajos
+                        <span class="badge bg-primary-subtle text-primary fw-medium ms-1"><?= count($trabajos) ?></span>
+                    </h6>
+                    <span class="fw-bold text-success fs-6">
+                        <i class="bi bi-cash me-1"></i><?= fmt_money($totalValor) ?>
+                    </span>
                 </div>
                 <div class="card-body">
                     <?php if (empty($trabajos)): ?>
                         <div class="text-center py-4">
-                            <i class="bi bi-inbox text-muted" style="font-size: 2rem;"></i>
-                            <p class="text-muted mb-0 mt-2">Sin trabajos registrados</p>
+                            <i class="bi bi-inbox text-muted" style="font-size: 2.5rem;"></i>
+                            <p class="text-muted mb-2 small mt-2">Sin trabajos registrados en esta gestión.</p>
                             <?php if (Auth::can('gestiones.editar')): ?>
-                            <a href="<?= base_url('/gestiones/' . $g['id'] . '/editar') ?>" class="btn btn-outline-primary btn-sm rounded-pill mt-2">
+                            <a href="<?= base_url('/gestiones/' . $g['id'] . '/editar') ?>" class="btn btn-outline-primary btn-sm rounded-pill px-3">
                                 <i class="bi bi-plus-lg me-1"></i> Agregar trabajos
                             </a>
                             <?php endif; ?>
                         </div>
                     <?php else: ?>
-                        <div class="list-group list-group-flush">
-                            <?php foreach ($trabajos as $t): ?>
-                                <div class="list-group-item px-0 py-3 border-bottom">
+                        <div class="mb-3">
+                            <?php $indexTrabajo = 1; foreach ($trabajos as $t): ?>
+                                <div class="trabajo-item-card">
                                     <div class="d-flex justify-content-between align-items-start gap-2">
-                                        <div class="flex-grow-1">
-                                            <div class="fw-semibold"><?= e($t['descripcion']) ?></div>
-                                            <span class="text-success fw-bold"><?= fmt_money($t['valor']) ?></span>
+                                        <div class="flex-grow-1" style="min-width: 0;">
+                                            <div class="d-flex align-items-start gap-2">
+                                                <span class="badge bg-secondary-subtle text-secondary small flex-shrink-0 mt-1">#<?= $indexTrabajo++ ?></span>
+                                                <div class="flex-grow-1" style="min-width: 0;">
+                                                    <span class="fw-semibold text-dark small text-break d-inline-block"><?= e($t['descripcion']) ?></span>
+                                                    <div class="mt-1">
+                                                        <span class="text-success fw-bold small"><?= fmt_money($t['valor']) ?></span>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div class="flex-shrink-0">
+                                        <div class="flex-shrink-0 text-end ps-2">
                                             <?php if ($t['proforma_id']): ?>
                                                 <a href="<?= base_url('/proformas/' . $t['proforma_id']) ?>" 
-                                                   class="badge bg-success text-white text-decoration-none fw-normal px-3 py-2">
-                                                    <i class="bi bi-file-earmark-check me-1"></i>
-                                                    <?= e($t['n_proforma'] ?: ('#' . $t['proforma_id'])) ?>
+                                                   class="badge bg-success-subtle text-success border border-success-subtle text-decoration-none px-2 py-1 small" 
+                                                   title="Ver proforma asignada">
+                                                    <i class="bi bi-file-earmark-check me-1"></i><?= e($t['n_proforma'] ?: ('#' . $t['proforma_id'])) ?>
                                                 </a>
                                             <?php else: ?>
-                                                <span class="badge bg-secondary bg-opacity-10 text-secondary fw-normal px-3 py-2">
-                                                    <i class="bi bi-hourglass-split me-1"></i>Sin asignar
+                                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1 small">
+                                                    <i class="bi bi-clock me-1"></i>Sin asignar
                                                 </span>
                                             <?php endif; ?>
                                         </div>
@@ -229,53 +261,47 @@ $totalValor = array_sum(array_map(fn($t) => (float) ($t['valor'] ?? 0), $trabajo
                                 </div>
                             <?php endforeach; ?>
                         </div>
-                        <div class="mt-3 text-center">
-                            <?php if (Auth::can('gestiones.editar')): ?>
+                        <?php if (Auth::can('gestiones.editar')): ?>
+                        <div class="text-center pt-2 border-top">
                             <a href="<?= base_url('/gestiones/' . $g['id'] . '/editar') ?>" class="btn btn-outline-primary btn-sm rounded-pill px-4">
                                 <i class="bi bi-pencil me-1"></i> Gestionar trabajos
                             </a>
-                            <?php endif; ?>
                         </div>
+                        <?php endif; ?>
                     <?php endif; ?>
                 </div>
             </div>
 
             <!-- Tarjeta de historial -->
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white border-bottom-0 pt-3 pb-0">
+            <div class="card detail-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
                     <h6 class="fw-bold text-secondary mb-0">
                         <i class="bi bi-clock-history me-2 text-primary"></i>Historial de cambios
                     </h6>
+                    <span class="badge bg-light text-muted border">Auditoría</span>
                 </div>
                 <div class="card-body">
                     <?php if (empty($historial)): ?>
                         <div class="text-center py-4">
-                            <i class="bi bi-clock text-muted" style="font-size: 2rem;"></i>
-                            <p class="text-muted mb-0 mt-2">Sin movimientos registrados</p>
+                            <i class="bi bi-clock text-muted" style="font-size: 2.5rem;"></i>
+                            <p class="text-muted mb-0 small mt-2">Sin movimientos registrados</p>
                         </div>
                     <?php else: ?>
-                        <div class="timeline">
-                            <?php $historialCount = count($historial); ?>
-                            <?php $historialIndex = 0; ?>
+                        <div class="timeline-modern">
                             <?php foreach ($historial as $h): ?>
-                                <div class="timeline-item pb-3 <?= $historialIndex < $historialCount - 1 ? 'border-button' : '' ?>">
-                                    <div class="d-flex gap-3">
-                                        <div class="flex-shrink-0">
-                                            <div class="bg-primary bg-opacity-10 rounded-circle p-2">
-                                                <i class="bi bi-arrow-right-circle text-primary"></i>
-                                            </div>
-                                        </div>
-                                        <div class="flex-grow-1">
-                                            <div class="fw-semibold small"><?= e($h['accion']) ?></div>
-                                            <div class="text-muted small">
-                                                <i class="bi bi-person me-1"></i><?= e($h['usuario_nombre'] ?? 'Sistema') ?>
-                                                <span class="mx-1">·</span>
-                                                <i class="bi bi-clock me-1"></i><?= date('d/m/Y H:i', strtotime($h['creado_en'])) ?>
-                                            </div>
+                                <div class="timeline-modern-item">
+                                    <div class="timeline-modern-node">
+                                        <i class="bi bi-arrow-right-short"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-semibold small text-dark"><?= e($h['accion']) ?></div>
+                                        <div class="text-muted small mt-1">
+                                            <i class="bi bi-person me-1"></i><?= e($h['usuario_nombre'] ?? 'Sistema') ?>
+                                            <span class="mx-1">·</span>
+                                            <i class="bi bi-clock me-1"></i><?= date('d/m/Y H:i', strtotime($h['creado_en'])) ?>
                                         </div>
                                     </div>
                                 </div>
-                                <?php $historialIndex++; ?>
                             <?php endforeach; ?>
                         </div>
                     <?php endif; ?>
@@ -284,72 +310,3 @@ $totalValor = array_sum(array_map(fn($t) => (float) ($t['valor'] ?? 0), $trabajo
         </div>
     </div>
 </div>
-
-<style>
-    /* Estilos personalizados */
-    .card {
-        border-radius: 12px !important;
-        overflow: hidden;
-        transition: box-shadow 0.2s ease;
-    }
-    
-    .card:hover {
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.08) !important;
-    }
-    
-    .card-header {
-        padding: 1rem 1.25rem 0.5rem 1.25rem;
-        background-color: transparent;
-        border-bottom: 1px solid rgba(0,0,0,0.05);
-    }
-    
-    .card-body {
-        padding: 1.25rem;
-    }
-    
-    .badge {
-        font-weight: 500;
-        border-radius: 50px;
-    }
-    
-    .btn.rounded-pill {
-        border-radius: 50px !important;
-    }
-    
-    /* Estilos para el timeline */
-    .timeline .timeline-item:last-child {
-        padding-bottom: 0 !important;
-    }
-    
-    .timeline .timeline-item .bg-primary.bg-opacity-10 {
-        background-color: rgba(13, 110, 253, 0.1) !important;
-        width: 36px;
-        height: 36px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    
-    /* Mejoras en listas */
-    .list-group-item {
-        background-color: transparent;
-        border-color: rgba(0, 0, 0, 0.05);
-    }
-    
-    .list-group-item:last-child {
-        border-bottom: 0 !important;
-    }
-    
-    /* Responsive */
-    @media (max-width: 768px) {
-        .d-flex.flex-wrap.gap-2 {
-            gap: 0.5rem !important;
-        }
-        
-        .btn.rounded-pill {
-            padding-left: 0.75rem !important;
-            padding-right: 0.75rem !important;
-            font-size: 0.875rem;
-        }
-    }
-</style>

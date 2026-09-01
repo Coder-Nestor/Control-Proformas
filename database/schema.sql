@@ -111,7 +111,7 @@ CREATE TABLE `gestiones` (
 
 CREATE TABLE `historial` (
   `id` int(11) NOT NULL,
-  `entidad` enum('gestion','proforma','oc','factura','entrega') NOT NULL,
+  `entidad` varchar(50) NOT NULL,
   `entidad_id` int(11) NOT NULL,
   `usuario_id` int(11) DEFAULT NULL,
   `accion` varchar(255) NOT NULL,

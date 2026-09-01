@@ -8,6 +8,10 @@ use App\Models\Gestion;
 use App\Models\Proveedor;
 use App\Models\Proforma;
 use App\Models\Trabajo;
+use App\Models\Area;
+use App\Models\OrdenCompra;
+use App\Models\Factura;
+use App\Models\EntregaFactura;
 
 class GestionController extends Controller
 {
@@ -20,19 +24,12 @@ class GestionController extends Controller
             'sin_asignar'  => $this->input('sin_asignar', ''),
             'buscar'       => $this->input('buscar', ''),
         ];
-
         $paginaActual = max(1, (int) $this->input('pagina', 1));
-        $porPagina    = self::POR_PAGINA;
-
+        $porPagina = self::POR_PAGINA;
         $totalRegistros = Gestion::contarConDetalle($filtros);
-        $totalPaginas   = max(1, (int) ceil($totalRegistros / $porPagina));
-
-        if ($paginaActual > $totalPaginas) {
-            $paginaActual = $totalPaginas;
-        }
-
+        $totalPaginas = max(1, (int) ceil($totalRegistros / $porPagina));
+        if ($paginaActual > $totalPaginas) $paginaActual = $totalPaginas;
         $offset = ($paginaActual - 1) * $porPagina;
-
         $gestiones = Gestion::allConDetalle($filtros, $porPagina, $offset);
 
         $trabajosPorGestion = [];
@@ -41,26 +38,23 @@ class GestionController extends Controller
         }
 
         $this->view('gestiones/index', [
-            'gestiones'          => $gestiones,
+            'gestiones' => $gestiones,
             'trabajosPorGestion' => $trabajosPorGestion,
-            'proveedores'        => Proveedor::activos(),
-            'filtros'            => $filtros,
-            'paginacion'         => [
-                'pagina_actual'   => $paginaActual,
-                'total_paginas'   => $totalPaginas,
-                'total_registros' => $totalRegistros,
-                'por_pagina'      => $porPagina,
-            ],
+            'proveedores' => Proveedor::activos(),
+            'proveedoresHabilitadosIds' => array_column(Proveedor::habilitadosParaProforma(), 'id'),
+            'filtros' => $filtros,
+            'paginacion' => ['pagina_actual' => $paginaActual, 'total_paginas' => $totalPaginas, 'total_registros' => $totalRegistros, 'por_pagina' => $porPagina],
         ]);
     }
 
     public function create(): void
     {
         $this->view('gestiones/form', [
-            'gestion'   => null,
-            'trabajos'  => [],
+            'gestion' => null,
+            'trabajos' => [],
             'proveedores' => Proveedor::activos(),
-            'proformas'   => Proforma::paraSelect(),
+            'proformas' => Proforma::paraSelect(),
+            'areas' => Area::activas(),
         ]);
     }
 
@@ -72,10 +66,11 @@ class GestionController extends Controller
         if (!empty($data['n_cotizacion']) && Gestion::numeroCotizacionExiste($data['n_cotizacion'])) {
             $this->flash('error', 'Ese número de cotización ya está registrado en otra gestión. Elige uno distinto.');
             $this->view('gestiones/form', [
-                'gestion'    => $data,
-                'trabajos'   => $this->collectTrabajos(),
-                'proveedores'=> Proveedor::activos(),
-                'proformas'  => Proforma::paraSelect(),
+                'gestion' => $data,
+                'trabajos' => $this->collectTrabajos(),
+                'proveedores' => Proveedor::activos(),
+                'proformas' => Proforma::paraSelect(),
+                'areas' => Area::activas(),
             ]);
             return;
         }
@@ -88,11 +83,7 @@ class GestionController extends Controller
 
         $gestionCreada = Gestion::findConDetalle($id);
         $descripcionCrear = $gestionCreada
-            ? sprintf(
-                'Creó la gestión: Cotización %s — %s',
-                $gestionCreada['n_cotizacion'] ?: '(sin número)',
-                $gestionCreada['proveedor_nombre'] ?? 'proveedor no especificado'
-              )
+            ? sprintf('Creó la gestión: Cotización %s — %s', $gestionCreada['n_cotizacion'] ?: '(sin número)', $gestionCreada['proveedor_nombre'] ?? 'proveedor no especificado')
             : 'Creó la gestión';
         Gestion::registrarHistorial($id, Auth::id(), $descripcionCrear);
 
@@ -104,36 +95,29 @@ class GestionController extends Controller
     {
         $id = (int) $params['id'];
         $gestion = Gestion::findConDetalle($id);
-
         if (!$gestion) {
             http_response_code(404);
             $this->view('errors/404_inline', []);
             return;
         }
-
-        $this->view('gestiones/show', [
-            'gestion'   => $gestion,
-            'trabajos'  => Trabajo::deGestion($id),
-            'historial' => Gestion::historialDe($id),
-        ]);
+        $this->view('gestiones/show', ['gestion' => $gestion, 'trabajos' => Trabajo::deGestion($id), 'historial' => Gestion::historialDe($id)]);
     }
 
     public function edit(array $params): void
     {
         $id = (int) $params['id'];
-        $gestion = Gestion::find($id);
-
+        $gestion = Gestion::findConDetalle($id);
         if (!$gestion) {
             http_response_code(404);
             $this->view('errors/404_inline', []);
             return;
         }
-
         $this->view('gestiones/form', [
-            'gestion'     => $gestion,
-            'trabajos'    => Trabajo::deGestion($id),
+            'gestion' => $gestion,
+            'trabajos' => Trabajo::deGestion($id),
             'proveedores' => Proveedor::activos(),
-            'proformas'   => Proforma::paraSelect(),
+            'proformas' => Proforma::paraSelect(),
+            'areas' => Area::activas(),
         ]);
     }
 
@@ -142,22 +126,20 @@ class GestionController extends Controller
         $this->verifyCsrf();
         $id = (int) $params['id'];
         $actual = Gestion::find($id);
-
         $data = $this->collectFormData();
 
         if (!empty($data['n_cotizacion']) && Gestion::numeroCotizacionExiste($data['n_cotizacion'], $id)) {
             $this->flash('error', 'Ese número de cotización ya está registrado en otra gestión. Elige uno distinto.');
             $this->view('gestiones/form', [
-                'gestion'    => array_merge($actual ?? [], $data),
-                'trabajos'   => $this->collectTrabajos(),
-                'proveedores'=> Proveedor::activos(),
-                'proformas'  => Proforma::paraSelect(),
+                'gestion' => array_merge($actual ?? [], $data),
+                'trabajos' => $this->collectTrabajos(),
+                'proveedores' => Proveedor::activos(),
+                'proformas' => Proforma::paraSelect(),
+                'areas' => Area::activas(),
             ]);
             return;
         }
 
-        // Si el usuario marcó "Eliminar documento actual" y no está subiendo
-        // uno nuevo para reemplazarlo, se borra el PDF que ya estaba guardado.
         $eliminarPdf = $this->input('eliminar_pdf', '0') === '1';
         if ($eliminarPdf && empty($_FILES['documento_pdf']['name'])) {
             if (!empty($actual['documento_pdf'])) {
@@ -173,11 +155,7 @@ class GestionController extends Controller
 
         $gestionActualizada = Gestion::findConDetalle($id);
         $descripcionActualizar = $gestionActualizada
-            ? sprintf(
-                'Actualizó los datos de la gestión: Cotización %s — %s',
-                $gestionActualizada['n_cotizacion'] ?: '(sin número)',
-                $gestionActualizada['proveedor_nombre'] ?? 'proveedor no especificado'
-              )
+            ? sprintf('Actualizó los datos de la gestión: Cotización %s — %s', $gestionActualizada['n_cotizacion'] ?: '(sin número)', $gestionActualizada['proveedor_nombre'] ?? 'proveedor no especificado')
             : 'Actualizó los datos de la gestión';
         Gestion::registrarHistorial($id, Auth::id(), $descripcionActualizar);
 
@@ -190,42 +168,72 @@ class GestionController extends Controller
         $this->verifyCsrf();
         $id = (int) $params['id'];
 
+        if ($this->algunTrabajoLlegoAEntrega($id) && !Auth::hasRole(['administrador'])) {
+            $this->flash('error', 'Esta gestión tiene al menos un trabajo (cotización o mensualidad) que ya llegó hasta Entrega de factura — solo un Administrador puede eliminarla.');
+            $this->redirect('/gestiones/' . $id);
+        }
+
         $gestion = Gestion::findConDetalle($id);
         if ($gestion && !empty($gestion['documento_pdf'])) {
             @unlink(__DIR__ . '/../../public/uploads/gestiones/' . $gestion['documento_pdf']);
         }
 
         $descripcion = $gestion
-            ? sprintf(
-                'Eliminó la gestión: Cotización %s — %s',
-                $gestion['n_cotizacion'] ?: '(sin número)',
-                $gestion['proveedor_nombre'] ?? 'proveedor no especificado'
-              )
+            ? sprintf('Eliminó la gestión: Cotización %s — %s', $gestion['n_cotizacion'] ?: '(sin número)', $gestion['proveedor_nombre'] ?? 'proveedor no especificado')
             : 'Eliminó la gestión';
 
         Gestion::registrarHistorial($id, Auth::id(), $descripcion);
-        Gestion::delete($id);
+        Gestion::softDelete($id, Auth::id());
 
         $this->flash('success', 'Gestión eliminada.');
         $this->redirect('/gestiones');
     }
 
+    /**
+     * Revisa si CUALQUIERA de los trabajos de esta gestión (sea de cotización
+     * real o de mensualidad) ya llegó hasta tener una Entrega de factura
+     * registrada — Proforma -> Orden de Compra -> Factura -> Entrega, todos
+     * activos. Si es así, la gestión queda protegida: eliminarla dejaría
+     * huérfano un historial que ya se completó hasta el final del proceso.
+     */
+    private function algunTrabajoLlegoAEntrega(int $gestionId): bool
+    {
+        $trabajos = Trabajo::deGestion($gestionId);
+        foreach ($trabajos as $trabajo) {
+            if (empty($trabajo['proforma_id'])) {
+                continue;
+            }
+            $oc = OrdenCompra::findPorProforma((int) $trabajo['proforma_id']);
+            if (!$oc) {
+                continue;
+            }
+            $factura = Factura::findPorOrdenCompra((int) $oc['id']);
+            if (!$factura) {
+                continue;
+            }
+            if (EntregaFactura::findPorFactura((int) $factura['id'])) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private function collectFormData(): array
     {
-        $campos = [
-            'proveedor_id', 'solicitado_por', 'aprobado_por',
-            'fecha_aprobacion_trabajo', 'fecha_finalizacion_trabajo',
-            'n_cotizacion', 'fecha_revision_cotizacion',
-            'comentario',
-        ];
-
+        $campos = ['proveedor_id', 'solicitado_por', 'aprobado_por', 'fecha_aprobacion_trabajo', 'fecha_finalizacion_trabajo', 'n_cotizacion', 'fecha_revision_cotizacion', 'comentario'];
         $data = [];
         foreach ($campos as $campo) {
             $valor = $this->input($campo, null);
             $data[$campo] = ($valor === '' || $valor === null) ? null : $valor;
         }
-
         $data['proveedor_id'] = $data['proveedor_id'] !== null ? (int) $data['proveedor_id'] : null;
+
+        // En modo Mensualidad (sin N° de cotización) "Aprobado por" no aplica
+        // — se ignora aunque llegue algo en la petición, sin depender de que
+        // el formulario lo haya escondido correctamente.
+        if (empty($data['n_cotizacion'])) {
+            $data['aprobado_por'] = null;
+        }
 
         return $data;
     }
@@ -233,26 +241,16 @@ class GestionController extends Controller
     private function collectTrabajos(): array
     {
         $descripciones = $_POST['trabajo_descripcion'] ?? [];
-        $valores       = $_POST['trabajo_valor'] ?? [];
-        $proformaIds   = $_POST['trabajo_proforma_id'] ?? [];
-
+        $valores = $_POST['trabajo_valor'] ?? [];
+        $proformaIds = $_POST['trabajo_proforma_id'] ?? [];
         $trabajos = [];
         foreach ($descripciones as $i => $descripcion) {
             $descripcion = trim($descripcion);
-            if ($descripcion === '') {
-                continue;
-            }
-
+            if ($descripcion === '') continue;
             $valor = trim($valores[$i] ?? '');
             $proformaId = trim($proformaIds[$i] ?? '');
-
-            $trabajos[] = [
-                'descripcion' => $descripcion,
-                'valor'       => $valor !== '' ? $valor : null,
-                'proforma_id' => $proformaId !== '' ? (int) $proformaId : null,
-            ];
+            $trabajos[] = ['descripcion' => $descripcion, 'valor' => $valor !== '' ? $valor : null, 'proforma_id' => $proformaId !== '' ? (int) $proformaId : null];
         }
-
         return $trabajos;
     }
 }

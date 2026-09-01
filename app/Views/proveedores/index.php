@@ -24,14 +24,23 @@
         <div class="card-body">
             <form method="POST" action="<?= base_url('/proveedores') ?>" class="row g-3 align-items-end">
                 <?= csrf_field() ?>
-                <div class="col-md-9">
+                <div class="col-md-6">
                     <label class="form-label fw-semibold">Nombre</label>
                     <div class="input-group">
                         <span class="input-group-text bg-light"><i class="bi bi-building"></i></span>
                         <input type="text" name="nombre" class="form-control"  required>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-4">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="habilitado_proforma" value="1" id="habilitadoProformaNuevo">
+                        <label class="form-check-label small" for="habilitadoProformaNuevo">
+                            ¿Puede pasar a Proforma?
+                        </label>
+                    </div>
+                    <small class="text-muted d-block">Si no se marca, sus cotizaciones se quedan solo en Gestiones.</small>
+                </div>
+                <div class="col-md-2">
                     <button class="btn btn-primary w-100 rounded-pill">
                         <i class="bi bi-plus-lg me-1"></i> Agregar
                     </button>
@@ -57,6 +66,7 @@
                         <tr>
                             <th class="fw-semibold text-secondary ps-3 py-3">Nombre</th>
                             <th class="fw-semibold text-secondary py-3">Estado</th>
+                            <th class="fw-semibold text-secondary py-3">¿Pasa a Proforma?</th>
                             <?php if (Auth::can('proveedores.gestionar') || Auth::can('proveedores.eliminar')): ?>
                                 <th class="fw-semibold text-secondary text-end pe-3 py-3">Acciones</th>
                             <?php endif; ?>
@@ -74,6 +84,17 @@
                                     <?= $p['activo'] ? 'Activo' : 'Inactivo' ?>
                                 </span>
                             </td>
+                            <td class="py-3">
+                                <?php if (!empty($p['habilitado_proforma'])): ?>
+                                    <span class="badge bg-primary-subtle text-primary fw-normal px-3 py-2">
+                                        <i class="bi bi-check-circle me-1"></i>Sí
+                                    </span>
+                                <?php else: ?>
+                                    <span class="badge bg-secondary bg-opacity-10 text-secondary fw-normal px-3 py-2">
+                                        <i class="bi bi-dash-circle me-1"></i>No
+                                    </span>
+                                <?php endif; ?>
+                            </td>
                             <?php if (Auth::can('proveedores.gestionar') || Auth::can('proveedores.eliminar')): ?>
                             <td class="text-end pe-3 py-3">
                                 <div class="d-flex justify-content-end gap-1">
@@ -85,6 +106,7 @@
                                             data-id="<?= (int) $p['id'] ?>"
                                             data-nombre="<?= e($p['nombre']) ?>"
                                             data-activo="<?= (int) $p['activo'] ?>"
+                                            data-habilitado-proforma="<?= (int) ($p['habilitado_proforma'] ?? 0) ?>"
                                             title="Editar nombre">
                                         <i class="bi bi-pencil"></i>
                                     </button>
@@ -145,6 +167,13 @@
                         <span class="input-group-text bg-light"><i class="bi bi-diagram-3"></i></span>
                         <input type="text" name="nombre" id="editarProveedorNombre" class="form-control" required>
                     </div>
+                    <div class="form-check mt-3">
+                        <input class="form-check-input" type="checkbox" name="habilitado_proforma" value="1" id="editarProveedorHabilitadoProforma">
+                        <label class="form-check-label small" for="editarProveedorHabilitadoProforma">
+                            ¿Puede pasar a Proforma?
+                        </label>
+                    </div>
+                    <small class="text-muted d-block">Si no se marca, sus cotizaciones se quedan solo en Gestiones.</small>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary rounded-pill" data-bs-dismiss="modal">Cancelar</button>
@@ -165,10 +194,12 @@ document.addEventListener('DOMContentLoaded', function () {
         var id = btn.getAttribute('data-id');
         var nombre = btn.getAttribute('data-nombre');
         var activo = btn.getAttribute('data-activo');
+        var habilitadoProforma = btn.getAttribute('data-habilitado-proforma');
 
         document.getElementById('formEditarProveedor').action = '<?= base_url('/proveedores') ?>/' + id;
         document.getElementById('editarProveedorNombre').value = nombre;
         document.getElementById('editarProveedorActivo').value = activo;
+        document.getElementById('editarProveedorHabilitadoProforma').checked = (habilitadoProforma === '1');
     });
 });
 </script>

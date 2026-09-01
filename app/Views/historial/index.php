@@ -82,6 +82,7 @@
                         <?php
                             $rowClass = $rIndex % 2 === 0 ? 'bg-white' : 'bg-light-subtle';
                             $esEliminacion = stripos($r['accion'], 'elimin') !== false;
+                            $esDesactivacion = stripos($r['accion'], 'desactiv') !== false;
                             $existe = (int) $r['existe'] > 0;
                         ?>
                         <tr class="<?= $rowClass ?>">
@@ -94,6 +95,8 @@
                             <td class="py-3">
                                 <?php if ($esEliminacion): ?>
                                     <i class="bi bi-trash text-danger me-1"></i>
+                                <?php elseif ($esDesactivacion): ?>
+                                    <i class="bi bi-person-x text-warning me-1"></i>
                                 <?php else: ?>
                                     <i class="bi bi-pencil text-muted me-1"></i>
                                 <?php endif; ?>
@@ -104,7 +107,13 @@
                             </td>
                             <td class="text-end pe-3 py-3">
                                 <?php if ($existe && isset($rutas[$r['entidad']])): ?>
-                                    <a href="<?= base_url($rutas[$r['entidad']] . (int) $r['entidad_id']) ?>" class="btn btn-outline-primary btn-sm rounded-pill px-3">
+                                    <?php
+                                        $url = base_url($rutas[$r['entidad']]);
+                                        if (!in_array($r['entidad'], ['proveedor', 'area', 'usuario'], true)) {
+                                            $url .= (int) $r['entidad_id'];
+                                        }
+                                    ?>
+                                    <a href="<?= $url ?>" class="btn btn-outline-primary btn-sm rounded-pill px-3">
                                         <i class="bi bi-eye me-1"></i>Ver
                                     </a>
                                 <?php else: ?>

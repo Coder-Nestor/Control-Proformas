@@ -45,7 +45,7 @@ $val = fn($campo) => e($p[$campo] ?? ($prefill[$campo] ?? ''));
                         <select name="solicitado_por" class="form-select">
                             <option value="">Selecciona...</option>
                             <?php foreach ($areas as $a): ?>
-                                <option value="<?= e($a['nombre']) ?>" <?= ($p['solicitado_por'] ?? '') === $a['nombre'] ? 'selected' : '' ?>><?= e($a['nombre']) ?></option>
+                                <option value="<?= e($a['nombre']) ?>" <?= ($p['solicitado_por'] ?? $prefill['solicitado_por'] ?? '') === $a['nombre'] ? 'selected' : '' ?>><?= e($a['nombre']) ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -59,16 +59,85 @@ $val = fn($campo) => e($p[$campo] ?? ($prefill[$campo] ?? ''));
                 </div>
                 <div class="col-md-4">
                     <label class="form-label fw-semibold">N° de cotización</label>
-                    <div class="input-group">
-                        <span class="input-group-text bg-light"><i class="bi bi-hash"></i></span>
-                        <input type="text" name="n_cotizacion" id="n_cotizacion" value="<?= $val('n_cotizacion') ?>" class="form-control" placeholder="Ej. S06603">
+                    <div class="position-relative">
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
+                            <input type="text" 
+                                   name="n_cotizacion" 
+                                   id="n_cotizacion" 
+                                   class="form-control" 
+                                   placeholder="Escribe o selecciona una cotización..." 
+                                   value="<?= $val('n_cotizacion') ?>" 
+                                   autocomplete="off">
+                            <button class="btn btn-outline-secondary dropdown-toggle" 
+                                    type="button" 
+                                    id="btnToggleCotizaciones" 
+                                    title="Ver todas las cotizaciones"
+                                    aria-expanded="false"></button>
+                            <ul class="dropdown-menu dropdown-menu-end w-100 shadow p-0 mt-1" id="cotizacionesDropdownMenu" style="max-height: 280px; overflow-y: auto; z-index: 1050; width: 100%; top: 100%; left: 0;">
+                                <li class="p-2 border-bottom bg-light d-flex justify-content-between align-items-center sticky-top">
+                                    <span class="small text-muted fw-bold"><i class="bi bi-list-check me-1"></i>Cotizaciones en Gestiones</span>
+                                    <button type="button" class="btn btn-outline-danger btn-sm py-0 px-2 rounded-pill text-decoration-none" id="btnSelectMensualidad">
+                                        <i class="bi bi-x-circle me-1"></i>Sin cotización
+                                    </button>
+                                </li>
+                                <div id="cotizacionesListOptions">
+                                    <?php 
+                                    $cotizacionesList = $cotizaciones ?? [];
+                                    if (empty($cotizacionesList)):
+                                    ?>
+                                        <li class="p-3 text-center text-muted small">
+                                            <i class="bi bi-check2-all text-success d-block mb-1 fs-5"></i>
+                                            No hay cotizaciones con trabajos disponibles sin proforma
+                                        </li>
+                                    <?php else: ?>
+                                        <?php foreach ($cotizacionesList as $c): ?>
+                                            <li>
+                                                <a href="#" class="dropdown-item py-2 px-3 border-bottom cotizacion-option-item text-wrap" 
+                                                   data-value="<?= e($c['n_cotizacion']) ?>" 
+                                                   data-proveedor-id="<?= (int)($c['proveedor_id'] ?? 0) ?>" 
+                                                   data-solicitado-por="<?= e($c['solicitado_por'] ?? '') ?>">
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <span class="fw-bold text-primary"><?= e($c['n_cotizacion']) ?></span>
+                                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle"><?= e($c['proveedor_nombre'] ?? 'Sin proveedor') ?></span>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between align-items-center mt-1">
+                                                        <small class="text-muted"><i class="bi bi-person me-1"></i><?= e($c['solicitado_por'] ?? '—') ?></small>
+                                                        <small class="text-success fw-semibold"><i class="bi bi-check2-circle me-1"></i><?= $c['trabajos_sin_asignar'] ?><?= $c['total_trabajos'] > 1 ? ' de ' . $c['total_trabajos'] : '' ?> disp.</small>
+                                                    </div>
+                                                </a>
+                                            </li>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </div>
+                                <li id="cotizacionesNoResults" class="p-3 text-center text-muted small d-none">
+                                    <i class="bi bi-search text-muted d-block mb-1 fs-5"></i>
+                                    No se encontraron cotizaciones coincidentes
+                                </li>
+                            </ul>
+                        </div>
                     </div>
-                    <div id="cotizacionHelp" class="form-text text-muted small"><i class="bi bi-info-circle me-1"></i>Si no hay número de cotización, esta proforma se guardará como mensualidad.</div>
+                    <div id="cotizacionHelp" class="form-text text-muted small"><i class="bi bi-info-circle me-1"></i>Escribe el número de cotización para filtrar o selecciona una de la lista.</div>
                 </div>
                 <div class="col-md-4" id="trabajo_select_container">
                     <label class="form-label fw-semibold">Trabajo de cotización</label>
-                    <select name="trabajo_id" id="trabajo_id" class="form-select" data-selected="<?= e($p['trabajo_id'] ?? $prefill['trabajo_id'] ?? '') ?>">
+                    <?php
+                        // Si el trabajo viene vinculado desde una Gestión y ES una
+                        // mensualidad (sin cotización), la búsqueda AJAX normal nunca
+                        // corre — así que la opción se agrega de una vez aquí mismo,
+                        // para que su valor SÍ se envíe al guardar el formulario.
+                        $trabajoVinculadoId = $p['trabajo_id'] ?? $prefill['trabajo_id'] ?? null;
+                        $esVinculoSinCotizacion = empty($p['n_cotizacion'] ?? $prefill['n_cotizacion'] ?? null);
+                    ?>
+                    <select name="trabajo_id" id="trabajo_id" class="form-select" data-selected="<?= e($trabajoVinculadoId ?? '') ?>">
                         <option value="">Selecciona un trabajo</option>
+                        <?php if (!empty($trabajoVinculadoId) && $esVinculoSinCotizacion): ?>
+                            <option value="<?= (int) $trabajoVinculadoId ?>" selected
+                                    data-valor="<?= $val('valor_cotizacion') ?>"
+                                    data-descripcion="<?= $val('trabajo') ?>">
+                                <?= $val('trabajo') ?: ('Trabajo #' . (int) $trabajoVinculadoId) ?>
+                            </option>
+                        <?php endif; ?>
                     </select>
                     <input type="hidden" name="trabajo" id="trabajo" value="<?= $val('trabajo') ?>">
                     <div id="trabajoMessage" class="form-text text-muted small"></div>
@@ -77,11 +146,11 @@ $val = fn($campo) => e($p[$campo] ?? ($prefill[$campo] ?? ''));
                     <label class="form-label fw-semibold">Trabajo mensualidad</label>
                     <div class="input-group">
                         <span class="input-group-text bg-light"><i class="bi bi-pencil"></i></span>
-                        <input type="text" name="trabajo_manual" id="trabajo_manual" value="<?= e($p['trabajo'] ?? '') ?>" class="form-control" placeholder="Describe el trabajo manualmente">
+                        <input type="text" name="trabajo_manual" id="trabajo_manual" value="<?= $val('trabajo') ?>" class="form-control" placeholder="Describe el trabajo manualmente">
                     </div>
                     <div class="form-text text-muted small"><i class="bi bi-info-circle me-1"></i>Describe el trabajo que se factura como mensualidad.</div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-4" id="valor_cotizacion_container">
                     <label class="form-label fw-semibold">Valor de cotización (L.)</label>
                     <div class="input-group">
                         <span class="input-group-text bg-light"><i class="bi bi-cash"></i></span>
@@ -135,7 +204,7 @@ $val = fn($campo) => e($p[$campo] ?? ($prefill[$campo] ?? ''));
                     </div>
                 </div>
                 <div class="form-check mb-3 d-none" id="avisoEliminarPdf">
-                    <input class="form-check-input" type="checkbox" name="eliminar_pdf" value="1" id="eliminarPdfCheckbox" checked>
+                    <input class="form-check-input" type="checkbox" name="eliminar_pdf" value="1" id="eliminarPdfCheckbox">
                     <label class="form-check-label text-danger small" for="eliminarPdfCheckbox">
                         Se eliminará el documento actual al guardar. Si subes un archivo nuevo abajo, se usará ese en su lugar.
                     </label>
@@ -270,6 +339,11 @@ $val = fn($campo) => e($p[$campo] ?? ($prefill[$campo] ?? ''));
 <script>
     (() => {
         const cotizacionInput = document.getElementById('n_cotizacion');
+        const btnToggleCotizaciones = document.getElementById('btnToggleCotizaciones');
+        const cotizacionesDropdownMenu = document.getElementById('cotizacionesDropdownMenu');
+        const cotizacionesListOptions = document.getElementById('cotizacionesListOptions');
+        const cotizacionesNoResults = document.getElementById('cotizacionesNoResults');
+        const btnSelectMensualidad = document.getElementById('btnSelectMensualidad');
         const trabajoSelect = document.getElementById('trabajo_id');
         const trabajoDescripcionField = document.getElementById('trabajo');
         const trabajoManualContainer = document.getElementById('trabajo_manual_container');
@@ -277,12 +351,169 @@ $val = fn($campo) => e($p[$campo] ?? ($prefill[$campo] ?? ''));
         const cotizacionHelp = document.getElementById('cotizacionHelp');
         const valorCotizacionField = document.getElementById('valor_cotizacion');
         const valorProformaField = document.querySelector('input[name="valor_proforma"]');
-
+        const proveedorSelect = document.querySelector('select[name="proveedor_id"]');
+        const solicitadoPorSelect = document.querySelector('select[name="solicitado_por"]');
         const trabajoMessage = document.getElementById('trabajoMessage');
 
-        let fetchTimeout = null;
+        let isInitialLoad = true;
 
         const formatCurrency = value => Number(value).toLocaleString('es-HN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        // Filtrar elementos del dropdown de cotizaciones
+        const filterCotizaciones = (query) => {
+            const q = (query || '').trim().toLowerCase();
+            const items = cotizacionesListOptions ? cotizacionesListOptions.querySelectorAll('.cotizacion-option-item') : [];
+            let visibleCount = 0;
+            items.forEach(item => {
+                const cotVal = (item.dataset.value || '').toLowerCase();
+                const text = (item.textContent || '').toLowerCase();
+                if (!q || cotVal.includes(q) || text.includes(q)) {
+                    item.closest('li').style.display = '';
+                    visibleCount++;
+                } else {
+                    item.closest('li').style.display = 'none';
+                }
+            });
+
+            if (cotizacionesNoResults) {
+                if (visibleCount === 0) {
+                    cotizacionesNoResults.classList.remove('d-none');
+                } else {
+                    cotizacionesNoResults.classList.add('d-none');
+                }
+            }
+        };
+
+        const showDropdown = () => {
+            if (cotizacionesDropdownMenu && !cotizacionesDropdownMenu.classList.contains('show')) {
+                cotizacionesDropdownMenu.classList.add('show');
+                if (btnToggleCotizaciones) {
+                    btnToggleCotizaciones.setAttribute('aria-expanded', 'true');
+                }
+            }
+        };
+
+        const hideDropdown = () => {
+            if (cotizacionesDropdownMenu && cotizacionesDropdownMenu.classList.contains('show')) {
+                cotizacionesDropdownMenu.classList.remove('show');
+                if (btnToggleCotizaciones) {
+                    btnToggleCotizaciones.setAttribute('aria-expanded', 'false');
+                }
+            }
+        };
+
+        // Toggle manual con el botón de la flecha
+        if (btnToggleCotizaciones) {
+            btnToggleCotizaciones.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (cotizacionesDropdownMenu && cotizacionesDropdownMenu.classList.contains('show')) {
+                    hideDropdown();
+                } else {
+                    filterCotizaciones(cotizacionInput ? cotizacionInput.value : '');
+                    showDropdown();
+                    if (cotizacionInput) cotizacionInput.focus();
+                }
+            });
+        }
+
+        // Eventos de entrada y búsqueda en cotizaciones (sin perder el foco)
+        if (cotizacionInput) {
+            cotizacionInput.addEventListener('focus', () => {
+                filterCotizaciones(cotizacionInput.value);
+                showDropdown();
+            });
+
+            cotizacionInput.addEventListener('input', () => {
+                filterCotizaciones(cotizacionInput.value);
+                showDropdown();
+                updateTrabajoMode();
+            });
+
+            cotizacionInput.addEventListener('change', () => {
+                handleCotizacionSelected(cotizacionInput.value.trim());
+            });
+
+            cotizacionInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    hideDropdown();
+                    handleCotizacionSelected(cotizacionInput.value.trim());
+                } else if (e.key === 'Escape') {
+                    hideDropdown();
+                }
+            });
+        }
+
+        // Cerrar dropdown al hacer clic fuera
+        document.addEventListener('click', (e) => {
+            if (cotizacionesDropdownMenu && 
+                !cotizacionesDropdownMenu.contains(e.target) && 
+                e.target !== cotizacionInput && 
+                e.target !== btnToggleCotizaciones && 
+                (!btnToggleCotizaciones || !btnToggleCotizaciones.contains(e.target))) {
+                hideDropdown();
+            }
+        });
+
+        // Selección de una cotización de la lista
+        if (cotizacionesListOptions) {
+            cotizacionesListOptions.addEventListener('click', (e) => {
+                const option = e.target.closest('.cotizacion-option-item');
+                if (!option) return;
+                e.preventDefault();
+                const cotNumero = option.dataset.value || '';
+                const provId = option.dataset.proveedorId;
+                const solicPor = option.dataset.solicitadoPor;
+
+                cotizacionInput.value = cotNumero;
+                hideDropdown();
+
+                if (provId && provId !== '0' && proveedorSelect) {
+                    proveedorSelect.value = provId;
+                }
+                if (solicPor && solicitadoPorSelect) {
+                    solicitadoPorSelect.value = solicPor;
+                }
+
+                handleCotizacionSelected(cotNumero);
+            });
+        }
+
+        // Clic en "Sin cotización (Mensualidad)"
+        if (btnSelectMensualidad) {
+            btnSelectMensualidad.addEventListener('click', (e) => {
+                e.preventDefault();
+                cotizacionInput.value = '';
+                hideDropdown();
+                handleCotizacionSelected('');
+            });
+        }
+
+        const handleCotizacionSelected = (numero) => {
+            if (!numero) {
+                clearTrabajoOptions();
+                updateTrabajoMode();
+                return;
+            }
+
+            // Si coincide con alguna cotización existente en el listado, sincronizar proveedor/área
+            if (cotizacionesListOptions) {
+                const matchingItem = cotizacionesListOptions.querySelector(`.cotizacion-option-item[data-value="${CSS.escape(numero)}"]`);
+                if (matchingItem) {
+                    const provId = matchingItem.dataset.proveedorId;
+                    const solicPor = matchingItem.dataset.solicitadoPor;
+                    if (provId && provId !== '0' && proveedorSelect && (!proveedorSelect.value || proveedorSelect.value === '')) {
+                        proveedorSelect.value = provId;
+                    }
+                    if (solicPor && solicitadoPorSelect && (!solicitadoPorSelect.value || solicitadoPorSelect.value === '')) {
+                        solicitadoPorSelect.value = solicPor;
+                    }
+                }
+            }
+
+            fetchTrabajos(numero);
+        };
 
         const clearTrabajoOptions = () => {
             trabajoSelect.innerHTML = '<option value="">Selecciona un trabajo</option>';
@@ -298,7 +529,8 @@ $val = fn($campo) => e($p[$campo] ?? ($prefill[$campo] ?? ''));
                 option.value = trabajo.id;
                 option.dataset.valor = trabajo.valor;
                 option.dataset.descripcion = trabajo.descripcion;
-                option.textContent = `${trabajo.descripcion} — ${trabajo.proveedor_nombre} — L. ${formatCurrency(trabajo.valor)}`;
+                const asignada = trabajo.proforma_id ? ' (Ya asignado)' : '';
+                option.textContent = `${trabajo.descripcion} — ${trabajo.proveedor_nombre} — L. ${formatCurrency(trabajo.valor)}${asignada}`;
                 trabajoSelect.appendChild(option);
             });
 
@@ -308,45 +540,83 @@ $val = fn($campo) => e($p[$campo] ?? ($prefill[$campo] ?? ''));
             if (selectedId) {
                 trabajoSelect.value = selectedId;
                 if (trabajoSelect.value === selectedId) {
-                    trabajoSelect.dispatchEvent(new Event('change'));
+                    applySelectedJob(false);
                 }
             } else if (trabajos.length === 1) {
                 trabajoSelect.selectedIndex = 1;
-                trabajoSelect.dispatchEvent(new Event('change'));
+                applySelectedJob(true);
             }
 
             trabajoMessage.textContent = trabajos.length > 0
                 ? `Se encontraron ${trabajos.length} trabajo${trabajos.length > 1 ? 's' : ''} para la cotización.`
                 : 'No se encontraron trabajos para esa cotización.';
+
+            isInitialLoad = false;
         };
 
-        const buildSearchUrl = () => {
-            const pathSegments = window.location.pathname.split('/').filter(Boolean);
-            const proformasIndex = pathSegments.indexOf('proformas');
-            if (proformasIndex >= 0) {
-                return '/' + pathSegments.slice(0, proformasIndex + 1).join('/') + '/cotizacion';
+        const applySelectedJob = (forceUpdateProforma = true) => {
+            const selected = trabajoSelect.options[trabajoSelect.selectedIndex];
+            if (!selected || !selected.value) {
+                trabajoDescripcionField.value = '';
+                valorCotizacionField.value = '';
+                return;
             }
-            return '/proformas/cotizacion';
+            const valor = selected.dataset.valor || '';
+            const descripcion = selected.dataset.descripcion || selected.textContent || '';
+            trabajoDescripcionField.value = descripcion;
+            valorCotizacionField.value = valor;
+
+            // Actualiza siempre el valor de proforma al seleccionar/cambiar un trabajo
+            if (forceUpdateProforma || !valorProformaField.value || valorProformaField.value === '0.00' || valorProformaField.value === '') {
+                if (valor && valorProformaField) {
+                    valorProformaField.value = valor;
+                }
+            }
         };
+
+        trabajoSelect.addEventListener('change', () => {
+            // Cambio explícito de trabajo: actualiza valor de cotización y valor de proforma automáticamente
+            applySelectedJob(true);
+        });
+
+        const valorCotizacionContainer = document.getElementById('valor_cotizacion_container');
+        const trabajoSelectContainer = document.getElementById('trabajo_select_container');
 
         const updateTrabajoMode = () => {
             const tieneCotizacion = cotizacionInput.value.trim() !== '';
+            // Si el <select> ya trae una opción precargada (vino vinculado desde
+            // una Gestión), NO se deshabilita — un <select> deshabilitado no
+            // envía su valor al guardar, y eso es justo lo que causaba que se
+            // creara una gestión duplicada en vez de reutilizar la existente.
+            const yaVinculadoAUnTrabajo = trabajoSelect.dataset.selected && trabajoSelect.dataset.selected !== '';
 
             if (!tieneCotizacion) {
-                trabajoSelect.disabled = true;
+                trabajoSelect.disabled = !yaVinculadoAUnTrabajo;
+                if (trabajoSelectContainer) trabajoSelectContainer.style.display = 'none';
                 trabajoManualContainer.style.display = 'block';
-                cotizacionHelp.textContent = 'Sin número de cotización: esta proforma se guardará como mensualidad.';
+                cotizacionHelp.innerHTML = '<i class="bi bi-calendar-month me-1"></i>Modo Mensualidad: sin número de cotización.';
                 trabajoMessage.textContent = 'Describe manualmente el trabajo mensualidad.';
                 trabajoDescripcionField.value = trabajoManualInput.value.trim();
                 if (trabajoManualInput.value.trim()) {
                     trabajoDescripcionField.value = trabajoManualInput.value.trim();
                 }
+                // En Mensualidad no aplica un "valor de cotización" — solo se
+                // llena el Valor de proforma. Se oculta para no pedir el mismo
+                // monto dos veces, y el backend usa el de proforma automáticamente.
+                if (valorCotizacionContainer) {
+                    valorCotizacionContainer.style.display = 'none';
+                    valorCotizacionField.value = '';
+                }
             } else {
                 trabajoSelect.disabled = false;
+                if (trabajoSelectContainer) trabajoSelectContainer.style.display = '';
                 trabajoManualContainer.style.display = 'none';
-                cotizacionHelp.textContent = 'Selecciona un trabajo desde la cotización.';
+                cotizacionHelp.innerHTML = '<i class="bi bi-info-circle me-1"></i>Escribe el número de cotización para filtrar o selecciona una de la lista.';
                 if (!trabajoSelect.value) {
                     trabajoDescripcionField.value = '';
+                }
+                if (valorCotizacionContainer) {
+                    valorCotizacionContainer.style.display = '';
                 }
             }
         };
@@ -358,7 +628,8 @@ $val = fn($campo) => e($p[$campo] ?? ($prefill[$campo] ?? ''));
                 return;
             }
 
-            const url = buildSearchUrl() + '?numero=' + encodeURIComponent(numero.trim());
+            const searchBaseUrl = <?= json_encode(base_url('/proformas/cotizacion')) ?>;
+            const url = searchBaseUrl + '?numero=' + encodeURIComponent(numero.trim());
             fetch(url, { credentials: 'same-origin' })
                 .then(response => {
                     if (!response.ok) {
@@ -378,24 +649,6 @@ $val = fn($campo) => e($p[$campo] ?? ($prefill[$campo] ?? ''));
                     trabajoMessage.textContent = 'No se pudo cargar la información de trabajos. Intenta nuevamente.';
                 });
         };
-
-        cotizacionInput.addEventListener('input', () => {
-            if (fetchTimeout) {
-                clearTimeout(fetchTimeout);
-            }
-            fetchTimeout = setTimeout(() => fetchTrabajos(cotizacionInput.value), 500);
-        });
-
-        trabajoSelect.addEventListener('change', () => {
-            const selected = trabajoSelect.options[trabajoSelect.selectedIndex];
-            const valor = selected?.dataset?.valor || '';
-            const descripcion = selected?.dataset?.descripcion || selected?.textContent || '';
-            trabajoDescripcionField.value = descripcion;
-            valorCotizacionField.value = valor;
-            if (valor && valorProformaField) {
-                valorProformaField.value = valor;
-            }
-        });
 
         trabajoManualInput.addEventListener('input', () => {
             trabajoDescripcionField.value = trabajoManualInput.value.trim();

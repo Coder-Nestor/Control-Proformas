@@ -1,9 +1,11 @@
 <div class="container-fluid px-0">
-    <!-- Encabezado -->
+    <!-- ============================================================ -->
+    <!-- ENCABEZADO -->
+    <!-- ============================================================ -->
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
         <div>
-            <h4 class="mb-1 fw-bold text-primary">
-                <i class="bi bi-speedometer2 me-2"></i>Dashboard
+            <h4 class="mb-1 fw-bold text-primary d-flex align-items-center gap-2">
+                <i class="bi bi-speedometer2"></i> Dashboard
             </h4>
             <p class="text-muted small mb-0">
                 <i class="bi bi-info-circle me-1"></i>Lo que necesita tu atención hoy
@@ -16,17 +18,16 @@
         </div>
     </div>
 
-    <!-- Fila 1: 4 alertas de acción, tamaño uniforme -->
-    <div class="row g-3 mb-3">
+    <div class="row g-3 mb-4">
         <div class="col-6 col-lg-3">
-            <a href="<?= base_url('/gestiones?sin_asignar=1') ?>" class="text-decoration-none">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-body d-flex align-items-center gap-3 py-4">
-                        <div class="bg-warning-subtle text-warning rounded-3 d-flex align-items-center justify-content-center flex-shrink-0" style="width:52px;height:52px;font-size:1.5rem;">
+            <a href="<?= base_url('/gestiones?sin_asignar=1') ?>" class="text-decoration-none d-block h-100">
+                <div class="card border-0 shadow-sm h-100 hover-lift">
+                    <div class="card-body d-flex align-items-center gap-3 py-3">
+                        <div class="kpi-icon bg-warning-subtle text-warning">
                             <i class="bi bi-inboxes"></i>
                         </div>
-                        <div>
-                            <div class="fs-3 fw-bold"><?= (int) $sinAsignar ?></div>
+                        <div class="min-width-0">
+                            <div class="fs-2 fw-bold lh-1"><?= (int) $sinAsignar ?></div>
                             <div class="text-muted small">Gestiones sin proforma</div>
                         </div>
                     </div>
@@ -34,14 +35,14 @@
             </a>
         </div>
         <div class="col-6 col-lg-3">
-            <a href="<?= base_url('/gestiones') ?>" class="text-decoration-none">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-body d-flex align-items-center gap-3 py-4">
-                        <div class="bg-danger-subtle text-danger rounded-3 d-flex align-items-center justify-content-center flex-shrink-0" style="width:52px;height:52px;font-size:1.5rem;">
+            <a href="<?= base_url('/gestiones') ?>" class="text-decoration-none d-block h-100">
+                <div class="card border-0 shadow-sm h-100 hover-lift">
+                    <div class="card-body d-flex align-items-center gap-3 py-3">
+                        <div class="kpi-icon bg-danger-subtle text-danger">
                             <i class="bi bi-exclamation-triangle"></i>
                         </div>
-                        <div>
-                            <div class="fs-3 fw-bold"><?= count($atrasadas) ?></div>
+                        <div class="min-width-0">
+                            <div class="fs-2 fw-bold lh-1"><?= count($atrasadas) ?></div>
                             <div class="text-muted small">Gestiones atrasadas</div>
                         </div>
                     </div>
@@ -49,14 +50,14 @@
             </a>
         </div>
         <div class="col-6 col-lg-3">
-            <a href="<?= base_url('/proformas?sin_oc=1') ?>" class="text-decoration-none">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-body d-flex align-items-center gap-3 py-4">
-                        <div class="bg-warning-subtle text-warning rounded-3 d-flex align-items-center justify-content-center flex-shrink-0" style="width:52px;height:52px;font-size:1.5rem;">
+            <a href="<?= base_url('/proformas?sin_oc=1') ?>" class="text-decoration-none d-block h-100">
+                <div class="card border-0 shadow-sm h-100 hover-lift">
+                    <div class="card-body d-flex align-items-center gap-3 py-3">
+                        <div class="kpi-icon bg-warning-subtle text-warning">
                             <i class="bi bi-cart"></i>
                         </div>
-                        <div>
-                            <div class="fs-3 fw-bold"><?= (int) $proformasSinOc ?></div>
+                        <div class="min-width-0">
+                            <div class="fs-2 fw-bold lh-1"><?= (int) $proformasSinOc ?></div>
                             <div class="text-muted small">Proformas sin OC</div>
                         </div>
                     </div>
@@ -64,14 +65,14 @@
             </a>
         </div>
         <div class="col-6 col-lg-3">
-            <a href="<?= base_url('/entregas/crear') ?>" class="text-decoration-none">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-body d-flex align-items-center gap-3 py-4">
-                        <div class="bg-info-subtle text-info rounded-3 d-flex align-items-center justify-content-center flex-shrink-0" style="width:52px;height:52px;font-size:1.5rem;">
+            <a href="<?= base_url('/entregas/crear') ?>" class="text-decoration-none d-block h-100">
+                <div class="card border-0 shadow-sm h-100 hover-lift">
+                    <div class="card-body d-flex align-items-center gap-3 py-3">
+                        <div class="kpi-icon bg-info-subtle text-info">
                             <i class="bi bi-truck"></i>
                         </div>
-                        <div>
-                            <div class="fs-3 fw-bold"><?= (int) $facturasSinEntrega ?></div>
+                        <div class="min-width-0">
+                            <div class="fs-2 fw-bold lh-1"><?= (int) $facturasSinEntrega ?></div>
                             <div class="text-muted small">Facturas sin entrega</div>
                         </div>
                     </div>
@@ -80,54 +81,37 @@
         </div>
     </div>
 
-    <!-- Fila 2: la alerta más crítica destacada + el valor total, ambas más grandes -->
     <div class="row g-3 mb-4">
-        <div class="col-lg-7">
-            <a href="<?= base_url('/entregas') ?>" class="text-decoration-none">
-                <div class="card border-0 shadow-sm h-100 border-start border-4 border-danger">
-                    <div class="card-body d-flex align-items-center gap-4 py-4">
-                        <div class="bg-danger-subtle text-danger rounded-3 d-flex align-items-center justify-content-center flex-shrink-0" style="width:64px;height:64px;font-size:1.9rem;">
-                            <i class="bi bi-hourglass-split"></i>
-                        </div>
-                        <div>
-                            <div class="fs-1 fw-bold text-danger lh-1"><?= count($entregasAtrasadas) ?></div>
-                            <div class="fw-semibold mt-1">Entregas atrasadas</div>
-                            <div class="text-muted small">Más de <?= (int) $umbralFactura ?> días sin solicitar orden de pago — regla crítica del proceso</div>
-                        </div>
-                    </div>
-                </div>
-            </a>
-        </div>
-        <div class="col-lg-5">
-            <div class="card border-0 shadow-sm h-100">
+        <div class="col-12 col-lg-6">
+            <div class="card border-0 shadow-sm">
                 <div class="card-body d-flex align-items-center gap-4 py-4">
-                    <div class="bg-success-subtle text-success rounded-3 d-flex align-items-center justify-content-center flex-shrink-0" style="width:64px;height:64px;font-size:1.9rem;">
+                    <div class="kpi-icon kpi-icon-lg bg-success-subtle text-success">
                         <i class="bi bi-cash"></i>
                     </div>
                     <div>
-                        <div class="fs-3 fw-bold lh-1"><?= fmt_money($valorTotalCotizado) ?></div>
+                        <div class="fs-1 fw-bold lh-1 text-success"><?= fmt_money($valorTotalCotizado) ?></div>
                         <div class="text-muted small mt-1">Valor total cotizado</div>
                     </div>
                 </div>
             </div>
         </div>
+        <div class="col-12 col-lg-6 d-none d-lg-block"></div>
     </div>
 
-   
-
-    <!-- Resumen del proceso: Cotización -> Proforma -> OCE -> Factura, tal como en el Excel -->
     <div class="card border-0 shadow-sm" id="cardResumen">
-        <div class="card-header bg-white border-bottom-0 pt-3">
+        <div class="card-header bg-white border-bottom-0 pt-3 pb-0">
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <ul class="nav nav-tabs card-header-tabs" id="tabsResumen" role="tablist">
+                <ul class="nav nav-tabs card-header-tabs border-0" id="tabsResumen" role="tablist">
                     <li class="nav-item" role="presentation">
                         <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#panelResumenProformas" type="button">
                             <i class="bi bi-file-earmark-text me-1"></i> Resumen · Proformas
+                            <span class="badge bg-primary-subtle text-primary ms-1"><?= count($resumenProformas) ?></span>
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
                         <button class="nav-link" data-bs-toggle="tab" data-bs-target="#panelResumenFacturas" type="button">
                             <i class="bi bi-receipt me-1"></i> Resumen · Facturas
+                            <span class="badge bg-primary-subtle text-primary ms-1"><?= count($resumenFacturas) ?></span>
                         </button>
                     </li>
                 </ul>
@@ -136,8 +120,8 @@
                 </button>
             </div>
         </div>
+
         <div class="tab-content">
-            <!-- Panel: Resumen de Proformas -->
             <div class="tab-pane fade show active" id="panelResumenProformas">
                 <div class="card-body pt-3">
                     <div class="d-none d-print-flex align-items-center gap-3 pb-3 mb-3 print-header">
@@ -146,45 +130,67 @@
                             <h5 class="mb-0">Resumen de Proformas</h5>
                             <small class="text-muted">Control de Proformas y Facturas</small>
                         </div>
+                        <div class="ms-auto text-end d-none d-print-block">
+                            <small class="text-muted d-block">Generado: <?= date('d/m/Y H:i') ?></small>
+                            <small class="text-muted d-block">Por: <?= e(current_user_name()) ?></small>
+                        </div>
                     </div>
+
                     <?php if (empty($resumenProformas)): ?>
-                        <p class="text-muted mb-0 text-center py-4">Todavía no hay trabajos asignados a ninguna proforma.</p>
+                        <div class="text-center py-5">
+                            <i class="bi bi-inbox fs-1 text-muted d-block mb-2"></i>
+                            <p class="text-muted mb-0">Todavía no hay trabajos asignados a ninguna proforma.</p>
+                        </div>
                     <?php else: ?>
+                        <?php $totalValorProformas = array_sum(array_column($resumenProformas, 'valor_proforma')); ?>
                         <div class="table-responsive">
                             <table class="table table-hover align-middle mb-0">
-                                <thead class="bg-light">
-                                <tr>
-                                    <th class="fw-semibold text-secondary ps-3 py-2">N° Cotización</th>
-                                    <th class="fw-semibold text-secondary py-2">N° Proforma</th>
-                                    <th class="fw-semibold text-secondary text-end py-2">Valor Proforma</th>
-                                    <th class="fw-semibold text-secondary py-2">Solicitado por</th>
-                                    <th class="fw-semibold text-secondary pe-3 py-2">Comentario</th>
-                                </tr>
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="fw-semibold text-secondary ps-3 py-2" style="width:15%">N° Cotización</th>
+                                        <th class="fw-semibold text-secondary py-2" style="width:15%">N° Proforma</th>
+                                        <th class="fw-semibold text-secondary text-end py-2" style="width:15%">Valor Proforma</th>
+                                        <th class="fw-semibold text-secondary py-2" style="width:20%">Solicitado por</th>
+                                        <th class="fw-semibold text-secondary pe-3 py-2" style="width:35%">Comentario</th>
+                                    </tr>
                                 </thead>
                                 <tbody id="tbodyResumenProformas">
-                                <?php foreach ($resumenProformas as $rIndex => $r): ?>
-                                    <tr class="<?= $rIndex % 2 === 0 ? 'bg-white' : 'bg-light-subtle' ?>">
-                                        <td class="ps-3 py-2">
-                                            <span class="badge bg-secondary-subtle text-secondary fw-normal"><?= e($r['n_cotizacion'] ?? '—') ?></span>
-                                        </td>
-                                        <td class="py-2">
-                                            <a href="<?= base_url('/proformas/' . $r['proforma_id']) ?>" class="badge bg-primary-subtle text-primary text-decoration-none fw-normal">
-                                                <?= e($r['n_proforma'] ?: '#' . $r['proforma_id']) ?>
-                                            </a>
-                                        </td>
-                                        <td class="text-end py-2 fw-semibold"><?= fmt_money($r['valor_proforma']) ?></td>
-                                        <td class="py-2"><?= e($r['solicitado_por'] ?? '—') ?></td>
-                                        <td class="pe-3 py-2 text-muted small"><?= e($r['comentario'] ?? '—') ?></td>
-                                    </tr>
-                                <?php endforeach; ?>
+                                    <?php foreach ($resumenProformas as $rIndex => $r): ?>
+                                        <tr class="<?= $rIndex % 2 === 0 ? '' : 'table-light' ?>">
+                                            <td class="ps-3 py-2">
+                                                <?php if (!empty($r['n_cotizacion'])): ?>
+                                                    <span class="badge bg-secondary-subtle text-secondary fw-normal"><?= e($r['n_cotizacion']) ?></span>
+                                                <?php else: ?>
+                                                    <span class="badge bg-info-subtle text-info fw-normal">
+                                                        <i class="bi bi-calendar3 me-1"></i>Mensualidad
+                                                    </span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td class="py-2">
+                                                <a href="<?= base_url('/proformas/' . $r['proforma_id']) ?>" class="badge bg-primary-subtle text-primary text-decoration-none fw-normal">
+                                                    <?= e($r['n_proforma'] ?: '#' . $r['proforma_id']) ?>
+                                                </a>
+                                            </td>
+                                            <td class="text-end py-2 fw-semibold"><?= fmt_money($r['valor_proforma']) ?></td>
+                                            <td class="py-2"><?= e($r['solicitado_por'] ?? '—') ?></td>
+                                            <td class="pe-3 py-2 text-muted small"><?= e($r['comentario'] ?? '—') ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
                                 </tbody>
+                                <tfoot>
+                                    <tr class="fw-semibold" style="border-top: 2px solid #212529;">
+                                        <td class="ps-3 py-2" colspan="2">Total (<?= count($resumenProformas) ?> proforma<?= count($resumenProformas) === 1 ? '' : 's' ?>)</td>
+                                        <td class="text-end py-2"><?= fmt_money($totalValorProformas) ?></td>
+                                        <td colspan="2"></td>
+                                    </tr>
+                                </tfoot>
                             </table>
                         </div>
                         <div id="paginacionResumenProformas" class="mt-3 d-print-none"></div>
                     <?php endif; ?>
                 </div>
             </div>
-            <!-- Panel: Resumen de Facturas -->
+
             <div class="tab-pane fade" id="panelResumenFacturas">
                 <div class="card-body pt-3">
                     <div class="d-none d-print-flex align-items-center gap-3 pb-3 mb-3 print-header">
@@ -193,53 +199,77 @@
                             <h5 class="mb-0">Resumen de Facturas</h5>
                             <small class="text-muted">Control de Proformas y Facturas</small>
                         </div>
+                        <div class="ms-auto text-end d-none d-print-block">
+                            <small class="text-muted d-block">Generado: <?= date('d/m/Y H:i') ?></small>
+                            <small class="text-muted d-block">Por: <?= e(current_user_name()) ?></small>
+                        </div>
                     </div>
+
                     <?php if (empty($resumenFacturas)): ?>
-                        <p class="text-muted mb-0 text-center py-4">Todavía no hay facturas emitidas sobre ninguna proforma.</p>
+                        <div class="text-center py-5">
+                            <i class="bi bi-receipt fs-1 text-muted d-block mb-2"></i>
+                            <p class="text-muted mb-0">Todavía no hay facturas emitidas sobre ninguna proforma.</p>
+                        </div>
                     <?php else: ?>
-                        <?php $badgeEstado = ['correcta' => 'success', 'pendiente' => 'warning', 'con_problema' => 'danger']; ?>
+                        <?php
+                            $badgeEstado = ['correcta' => 'success', 'pendiente' => 'warning', 'con_problema' => 'danger'];
+                            $totalValorFacturas = array_sum(array_column($resumenFacturas, 'valor_proforma'));
+                        ?>
                         <div class="table-responsive">
                             <table class="table table-hover align-middle mb-0">
-                                <thead class="bg-light">
-                                <tr>
-                                    <th class="fw-semibold text-secondary ps-3 py-2">N° Cotización</th>
-                                    <th class="fw-semibold text-secondary py-2">N° Proforma</th>
-                                    <th class="fw-semibold text-secondary text-end py-2">Valor Proforma</th>
-                                    <th class="fw-semibold text-secondary py-2">N° OCE e interna</th>
-                                    <th class="fw-semibold text-secondary py-2">N° Factura</th>
-                                    <th class="fw-semibold text-secondary py-2">Estado</th>
-                                    <th class="fw-semibold text-secondary pe-3 py-2">Comentario</th>
-                                </tr>
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="fw-semibold text-secondary ps-3 py-2" style="width:12%">N° Cotización</th>
+                                        <th class="fw-semibold text-secondary py-2" style="width:12%">N° Proforma</th>
+                                        <th class="fw-semibold text-secondary text-end py-2" style="width:12%">Valor Proforma</th>
+                                        <th class="fw-semibold text-secondary py-2" style="width:12%">N° OCE e interna</th>
+                                        <th class="fw-semibold text-secondary py-2" style="width:12%">N° Factura</th>
+                                        <th class="fw-semibold text-secondary py-2" style="width:12%">Estado</th>
+                                        <th class="fw-semibold text-secondary pe-3 py-2" style="width:28%">Comentario</th>
+                                    </tr>
                                 </thead>
                                 <tbody id="tbodyResumenFacturas">
-                                <?php foreach ($resumenFacturas as $rIndex => $r): ?>
-                                    <tr class="<?= $rIndex % 2 === 0 ? 'bg-white' : 'bg-light-subtle' ?>">
-                                        <td class="ps-3 py-2">
-                                            <span class="badge bg-secondary-subtle text-secondary fw-normal"><?= e($r['n_cotizacion'] ?? '—') ?></span>
-                                        </td>
-                                        <td class="py-2 fw-medium"><?= e($r['n_proforma'] ?? '—') ?></td>
-                                        <td class="text-end py-2 fw-semibold"><?= fmt_money($r['valor_proforma']) ?></td>
-                                        <td class="py-2"><?= e($r['n_oce_interna'] ?? '—') ?></td>
-                                        <td class="py-2">
-                                            <?php if (!empty($r['n_factura'])): ?>
-                                                <a href="<?= base_url('/facturas/' . $r['factura_id']) ?>" class="badge bg-dark-subtle text-dark text-decoration-none fw-normal">
-                                                    <?= e($r['n_factura']) ?>
-                                                </a>
-                                            <?php else: ?>
-                                                <a href="<?= base_url('/facturas/' . $r['factura_id'] . '/editar') ?>" class="text-decoration-none text-muted small fst-italic" title="Todavía no se capturó el N° Factura — clic para completarlo">
-                                                    Sin capturar
-                                                </a>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td class="py-2">
-                                            <span class="badge bg-<?= $badgeEstado[$r['estado']] ?? 'secondary' ?>-subtle text-<?= $badgeEstado[$r['estado']] ?? 'secondary' ?> fw-normal">
-                                                <?= e(\App\Models\Factura::ESTADOS[$r['estado']] ?? $r['estado']) ?>
-                                            </span>
-                                        </td>
-                                        <td class="pe-3 py-2 text-muted small"><?= e($r['comentario'] ?? '—') ?></td>
-                                    </tr>
-                                <?php endforeach; ?>
+                                    <?php foreach ($resumenFacturas as $rIndex => $r): ?>
+                                        <tr class="<?= $rIndex % 2 === 0 ? '' : 'table-light' ?>">
+                                            <td class="ps-3 py-2">
+                                                <?php if (!empty($r['n_cotizacion'])): ?>
+                                                    <span class="badge bg-secondary-subtle text-secondary fw-normal"><?= e($r['n_cotizacion']) ?></span>
+                                                <?php else: ?>
+                                                    <span class="badge bg-info-subtle text-info fw-normal">
+                                                        <i class="bi bi-calendar3 me-1"></i>Mensualidad
+                                                    </span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td class="py-2 fw-medium"><?= e($r['n_proforma'] ?? '—') ?></td>
+                                            <td class="text-end py-2 fw-semibold"><?= fmt_money($r['valor_proforma']) ?></td>
+                                            <td class="py-2"><?= e($r['n_oce_interna'] ?? '—') ?></td>
+                                            <td class="py-2">
+                                                <?php if (!empty($r['n_factura'])): ?>
+                                                    <a href="<?= base_url('/facturas/' . $r['factura_id']) ?>" class="badge bg-dark-subtle text-dark text-decoration-none fw-normal">
+                                                        <?= e($r['n_factura']) ?>
+                                                    </a>
+                                                <?php else: ?>
+                                                    <a href="<?= base_url('/facturas/' . $r['factura_id'] . '/editar') ?>" class="text-decoration-none text-muted small fst-italic" title="Todavía no se capturó el N° Factura — clic para completarlo">
+                                                        Sin capturar
+                                                    </a>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td class="py-2">
+                                                <span class="badge bg-<?= $badgeEstado[$r['estado']] ?? 'secondary' ?>-subtle text-<?= $badgeEstado[$r['estado']] ?? 'secondary' ?> fw-normal">
+                                                    <?= e(\App\Models\Factura::ESTADOS[$r['estado']] ?? $r['estado']) ?>
+                                                </span>
+                                            </td>
+                                            <td class="pe-3 py-2 text-muted small"><?= e($r['comentario'] ?? '—') ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
                                 </tbody>
+                                <tfoot>
+                                    <tr class="fw-semibold" style="border-top: 2px solid #212529;">
+                                        <td class="ps-3 py-2" colspan="2">Total (<?= count($resumenFacturas) ?> factura<?= count($resumenFacturas) === 1 ? '' : 's' ?>)</td>
+                                        <td class="text-end py-2"><?= fmt_money($totalValorFacturas) ?></td>
+                                        <td colspan="4"></td>
+                                    </tr>
+                                </tfoot>
                             </table>
                         </div>
                         <div id="paginacionResumenFacturas" class="mt-3 d-print-none"></div>
@@ -247,123 +277,229 @@
                 </div>
             </div>
         </div>
-        <div class="card-footer bg-white border-top-0 py-2">
+
+        <div class="card-footer bg-white border-top-0 py-2 d-flex justify-content-between align-items-center flex-wrap">
             <small class="text-muted">
                 <i class="bi bi-clock me-1"></i>
                 Última actualización: <?= date('d/m/Y H:i') ?>
+            </small>
+            <small class="text-muted">
+                <i class="bi bi-layers me-1"></i>
+                Total proformas: <?= count($resumenProformas) ?> · Total facturas: <?= count($resumenFacturas) ?>
             </small>
         </div>
     </div>
 </div>
 
 <style>
-    .card { border-radius: 12px !important; overflow: hidden; }
-    .card-header { padding: 1rem 1.25rem 0.5rem 1.25rem; background-color: transparent; border-bottom: 1px solid rgba(0,0,0,0.05); }
-    .badge { font-weight: 500; }
-    .btn.rounded-pill { border-radius: 50px !important; }
-    .table > thead { border-bottom: 2px solid #e9ecef; }
-    .table-hover > tbody > tr:hover { background-color: rgba(13, 110, 253, 0.04) !important; }
-    .card-header-tabs .nav-link { border: none; color: #6c757d; font-weight: 500; }
-    .card-header-tabs .nav-link.active { color: #0d6efd; border-bottom: 2px solid #0d6efd; background: transparent; }
+    .card {
+        border-radius: 12px !important;
+        overflow: hidden;
+        transition: box-shadow 0.2s ease;
+        border: none !important;
+    }
 
-    /* ===================== Exportar PDF (impresión) ===================== */
+    .card-header {
+        padding: 1rem 1.25rem 0.5rem 1.25rem;
+        background-color: transparent;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .card-footer {
+        background-color: transparent;
+        border-top: 1px solid rgba(0, 0, 0, 0.04);
+    }
+
+    .badge {
+        font-weight: 500;
+    }
+
+    .btn.rounded-pill {
+        border-radius: 50px !important;
+    }
+
+    .kpi-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+        flex-shrink: 0;
+    }
+
+    .kpi-icon-lg {
+        width: 64px;
+        height: 64px;
+        font-size: 2rem;
+        border-radius: 16px;
+    }
+
+    .hover-lift {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .hover-lift:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08) !important;
+    }
+
+    .card-header-tabs .nav-link {
+        border: none;
+        color: #6c757d;
+        font-weight: 500;
+        padding: 0.5rem 1rem;
+        border-radius: 0;
+        background: transparent;
+        position: relative;
+    }
+
+    .card-header-tabs .nav-link.active {
+        color: #0d6efd;
+        border-bottom: 2.5px solid #0d6efd;
+        background: transparent;
+    }
+
+    .card-header-tabs .nav-link:hover:not(.active) {
+        color: #0d6efd;
+        background: rgba(13, 110, 253, 0.04);
+    }
+
+    .card-header-tabs .nav-link .badge {
+        font-size: 0.7rem;
+        padding: 0.2rem 0.5rem;
+    }
+
+    .table > thead {
+        border-bottom: 2px solid #e9ecef;
+    }
+
+    .table-hover > tbody > tr:hover {
+        background-color: rgba(13, 110, 253, 0.04) !important;
+    }
+
+    .table-light {
+        background-color: rgba(0, 0, 0, 0.02) !important;
+    }
+
+    .min-width-0 {
+        min-width: 0;
+    }
+
+    /* ============================================================ */
+    /* IMPRESIÓN (PDF) */
+    /* ============================================================ */
     @media print {
-        /* Hoja en horizontal, con margen — las tablas de Facturas tienen
-           7 columnas y no caben bien en vertical. */
         @page {
             size: landscape;
             margin: 12mm 10mm;
         }
 
-        /* Fuerza a que se impriman los colores de fondo (badges, franjas) —
-           sin esto, la mayoría de navegadores los omiten por defecto. */
         * {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
             color-adjust: exact !important;
         }
 
-        body {
+        html, body {
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
             background: #fff !important;
         }
 
-        /* Oculta todo lo que no sea la tarjeta de Resumen */
-        .sidebar, .topbar, .sidebar-backdrop {
+        #layout-wrapper,
+        #layout-wrapper > .flex-grow-1,
+        #layout-wrapper > .flex-grow-1 > main,
+        .container-fluid,
+        #cardResumen {
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            float: none !important;
+        }
+
+        .sidebar,
+        .topbar,
+        .sidebar-backdrop,
+        .container-fluid > *:not(#cardResumen),
+        #cardResumen .nav-tabs,
+        #cardResumen .btn,
+        #cardResumen .card-footer,
+        #cardResumen .d-print-none {
             display: none !important;
         }
-        .container-fluid > *:not(#cardResumen) {
-            display: none !important;
-        }
+
         #cardResumen {
             box-shadow: none !important;
             border: none !important;
         }
-        #cardResumen .nav-tabs,
-        #cardResumen .btn,
-        #cardResumen .card-footer {
-            display: none !important;
-        }
 
-        /* Membrete */
         .print-header {
             display: flex !important;
             border-bottom: 2px solid #212529;
         }
+
         .print-logo {
             height: 42px;
             width: auto;
         }
 
-        /* Tabla con formato de reporte: bordes, encabezado repetido en
-           cada página, y filas que no se cortan a la mitad entre páginas. */
         #cardResumen table {
             width: 100% !important;
             border-collapse: collapse !important;
-            font-size: 10.5pt;
+            font-size: 10pt;
         }
+
         #cardResumen table th,
         #cardResumen table td {
             border: 1px solid #adb5bd !important;
-            padding: 6px 8px !important;
+            padding: 4px 6px !important;
         }
+
         #cardResumen thead {
             display: table-header-group;
         }
+
+        #cardResumen tfoot {
+            display: table-footer-group;
+        }
+
+        #cardResumen tfoot tr {
+            background-color: #f1f1f1 !important;
+        }
+
         #cardResumen tbody tr {
             page-break-inside: avoid;
         }
+
         #cardResumen .badge {
-            border: 1px solid rgba(0,0,0,.15);
+            border: 1px solid rgba(0, 0, 0, 0.15);
         }
     }
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    var FILAS_POR_PAGINA = 10;
-    var tablasPaginadas = [];
+    const FILAS_POR_PAGINA = 10;
+    const tablasPaginadas = [];
 
-    /**
-     * Pagina una tabla en el navegador (sin recargar la página).
-     * Guarda referencias para poder "mostrar todas las filas" al exportar a PDF
-     * y luego volver a la página en la que estaba el usuario.
-     */
-    function paginarTabla(tbodyId, contenedorPaginacionId) {
-        var tbody = document.getElementById(tbodyId);
-        var contenedor = document.getElementById(contenedorPaginacionId);
-        if (!tbody || !contenedor) {
-            return;
-        }
+    function paginarTabla(tbodyId, contenedorId) {
+        const tbody = document.getElementById(tbodyId);
+        const contenedor = document.getElementById(contenedorId);
+        if (!tbody || !contenedor) return;
 
-        var filas = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
-        var totalPaginas = Math.max(1, Math.ceil(filas.length / FILAS_POR_PAGINA));
-        var paginaActual = 1;
+        const filas = Array.from(tbody.querySelectorAll('tr'));
+        const totalPaginas = Math.max(1, Math.ceil(filas.length / FILAS_POR_PAGINA));
+        let paginaActual = 1;
 
         function mostrarPagina(pagina) {
             paginaActual = Math.min(Math.max(1, pagina), totalPaginas);
-            var inicio = (paginaActual - 1) * FILAS_POR_PAGINA;
-            var fin = inicio + FILAS_POR_PAGINA;
-            filas.forEach(function (fila, i) {
+            const inicio = (paginaActual - 1) * FILAS_POR_PAGINA;
+            const fin = inicio + FILAS_POR_PAGINA;
+            filas.forEach((fila, i) => {
                 fila.style.display = (i >= inicio && i < fin) ? '' : 'none';
             });
             renderControles();
@@ -374,52 +510,46 @@ document.addEventListener('DOMContentLoaded', function () {
                 contenedor.innerHTML = '';
                 return;
             }
-            var html = '<nav><ul class="pagination pagination-sm mb-0 justify-content-center flex-wrap">';
+
+            let html = `<nav><ul class="pagination pagination-sm mb-0 justify-content-center flex-wrap">`;
             html += botonPagina(paginaActual - 1, '‹ Anterior', paginaActual === 1);
-            for (var i = 1; i <= totalPaginas; i++) {
-                html += '<li class="page-item' + (i === paginaActual ? ' active' : '') + '">' +
-                        '<button type="button" class="page-link" data-pagina="' + i + '">' + i + '</button></li>';
+            for (let i = 1; i <= totalPaginas; i++) {
+                html += `<li class="page-item ${i === paginaActual ? 'active' : ''}">
+                            <button class="page-link" data-pagina="${i}">${i}</button>
+                        </li>`;
             }
             html += botonPagina(paginaActual + 1, 'Siguiente ›', paginaActual === totalPaginas);
-            html += '</ul></nav>';
+            html += `</ul></nav>`;
             contenedor.innerHTML = html;
 
-            contenedor.querySelectorAll('.page-link[data-pagina]').forEach(function (btn) {
-                btn.addEventListener('click', function () {
-                    mostrarPagina(parseInt(this.getAttribute('data-pagina'), 10));
+            contenedor.querySelectorAll('.page-link[data-pagina]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    mostrarPagina(parseInt(btn.dataset.pagina, 10));
                 });
             });
         }
 
         function botonPagina(pagina, texto, deshabilitado) {
-            return '<li class="page-item' + (deshabilitado ? ' disabled' : '') + '">' +
-                   '<button type="button" class="page-link" data-pagina="' + pagina + '">' + texto + '</button></li>';
+            return `<li class="page-item ${deshabilitado ? 'disabled' : ''}">
+                        <button class="page-link" data-pagina="${pagina}">${texto}</button>
+                    </li>`;
         }
 
         mostrarPagina(1);
 
-        // Se guarda la referencia para poder mostrar/restaurar desde exportarResumenPDF().
         tablasPaginadas.push({
-            mostrarTodas: function () {
-                filas.forEach(function (fila) { fila.style.display = ''; });
-            },
-            restaurar: function () {
-                mostrarPagina(paginaActual);
-            }
+            mostrarTodas: () => filas.forEach(f => f.style.display = ''),
+            restaurar: () => mostrarPagina(paginaActual)
         });
     }
 
     paginarTabla('tbodyResumenProformas', 'paginacionResumenProformas');
     paginarTabla('tbodyResumenFacturas', 'paginacionResumenFacturas');
 
-    // Al exportar a PDF, se muestran TODAS las filas de la tabla activa
-    // (no solo la página visible), para que el reporte impreso quede completo.
     window.exportarResumenPDF = function () {
-        tablasPaginadas.forEach(function (t) { t.mostrarTodas(); });
+        tablasPaginadas.forEach(t => t.mostrarTodas());
         window.print();
-        setTimeout(function () {
-            tablasPaginadas.forEach(function (t) { t.restaurar(); });
-        }, 300);
+        setTimeout(() => tablasPaginadas.forEach(t => t.restaurar()), 400);
     };
 });
 </script>

@@ -18,7 +18,16 @@ class DashboardController extends Controller
         $umbralGestion = $config['app']['dias_alerta_gestion'];
         $umbralFactura = $config['app']['dias_alerta_factura'] ?? 8;
 
-        $valorTotalCotizado = (float) (Database::connection()->query('SELECT COALESCE(SUM(valor), 0) FROM trabajos')->fetchColumn());
+        // Solo se suman los trabajos cuya Gestión NO haya sido eliminada
+        // (borrado lógico) — antes sumaba directo de "trabajos" sin cruzar
+        // con "gestiones", así que un trabajo de una gestión ya eliminada
+        // seguía contando para siempre en este total.
+        $valorTotalCotizado = (float) (Database::connection()->query(
+            "SELECT COALESCE(SUM(t.valor), 0)
+             FROM trabajos t
+             INNER JOIN gestiones g ON g.id = t.gestion_id
+             WHERE g.eliminado_en IS NULL"
+        )->fetchColumn());
 
         $sinAsignar         = Gestion::contarSinAsignar();
         $proformasSinOc     = count(Proforma::allConDetalle(['sin_oc' => '1']));

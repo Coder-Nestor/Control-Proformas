@@ -29,7 +29,10 @@
         <form method="POST" action="<?= base_url('/roles') ?>">
             <?= csrf_field() ?>
 
-            <div class="row g-4 align-items-start">
+            <!-- Las 3 columnas de arriba tienen la MISMA altura (label + input,
+                 nada más), por eso align-items-end las deja perfectamente
+                 alineadas sin necesidad de trucos con margin-top. -->
+            <div class="row g-4 align-items-end">
 
                 <!-- Nombre del rol -->
                 <div class="col-lg-5">
@@ -57,14 +60,10 @@
                            class="form-control"
                            placeholder="Ej. supervisor_compras"
                            required>
-
-                    <small class="text-muted d-block mt-1">
-                        Solo letras, números y guion bajo — sin espacios ni tildes.
-                    </small>
                 </div>
 
                 <!-- Botón -->
-                <div class="col-lg-3 d-flex align-items-start">
+                <div class="col-lg-3">
                     <button class="btn btn-primary w-100 rounded-pill btn-crear-rol"
                             type="submit">
                         <i class="bi bi-plus-lg me-1"></i>
@@ -72,6 +71,16 @@
                     </button>
                 </div>
 
+            </div>
+
+            <!-- El texto de ayuda va en su propia línea, debajo, para que no
+                 afecte la altura de las columnas de arriba. -->
+            <div class="row">
+                <div class="col-lg-4 offset-lg-5">
+                    <small class="text-muted d-block mt-2">
+                        Solo letras, números y guion bajo — sin espacios ni tildes.
+                    </small>
+                </div>
             </div>
         </form>
     </div>
@@ -128,6 +137,18 @@
                             <!-- Acciones -->
                             <td class="text-end pe-3 py-3">
                                 <div class="d-flex justify-content-end gap-1">
+                                    <!-- Botón editar nombre -->
+                                    <button type="button"
+                                            class="btn btn-outline-secondary btn-sm rounded-pill"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#modalEditarRol"
+                                            data-id="<?= (int) $r['id'] ?>"
+                                            data-nombre="<?= e($r['nombre']) ?>"
+                                            data-slug="<?= e($r['slug']) ?>"
+                                            title="Editar nombre del rol">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+
                                     <!-- Botón permisos -->
                                     <a href="<?= base_url('/roles/' . $r['id'] . '/permisos') ?>" 
                                        class="btn btn-outline-primary btn-sm rounded-pill px-3">
@@ -168,11 +189,54 @@
     </div>
 </div>
 
+<!-- ============================================ -->
+<!-- MODAL: EDITAR NOMBRE DEL ROL                 -->
+<!-- ============================================ -->
+<div class="modal fade" id="modalEditarRol" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" id="formEditarRol" action="">
+                <?= csrf_field() ?>
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-pencil me-2 text-primary"></i>Editar rol</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="form-label fw-semibold">Nombre para mostrar</label>
+                    <input type="text" name="nombre" id="editarRolNombre" class="form-control" required>
+                    <small class="text-muted d-block mt-2">
+                        Identificador interno: <code id="editarRolSlug"></code> — no se puede cambiar desde aquí.
+                    </small>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary rounded-pill"><i class="bi bi-save me-1"></i> Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var modal = document.getElementById('modalEditarRol');
+    if (!modal) return;
+
+    modal.addEventListener('show.bs.modal', function (event) {
+        var btn = event.relatedTarget;
+        var id = btn.getAttribute('data-id');
+        var nombre = btn.getAttribute('data-nombre');
+        var slug = btn.getAttribute('data-slug');
+
+        document.getElementById('formEditarRol').action = '<?= base_url('/roles') ?>/' + id;
+        document.getElementById('editarRolNombre').value = nombre;
+        document.getElementById('editarRolSlug').textContent = slug;
+    });
+});
+</script>
 
 <style>
 .btn-crear-rol {
-    margin-top: 31px;
     min-height: 38px;
 }
-
 </style>

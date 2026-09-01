@@ -11,22 +11,13 @@ class EntregaFacturaController extends Controller
 {
     public function index(): void
     {
-        $filtros = [
-            'buscar' => $this->input('buscar', ''),
-        ];
-
-        $this->view('entregas/index', [
-            'entregas' => EntregaFactura::allConDetalle($filtros),
-            'filtros'  => $filtros,
-        ]);
+        $filtros = ['buscar' => $this->input('buscar', '')];
+        $this->view('entregas/index', ['entregas' => EntregaFactura::allConDetalle($filtros), 'filtros' => $filtros]);
     }
 
     public function create(): void
     {
-        $this->view('entregas/form', [
-            'entrega'  => null,
-            'facturas' => Factura::sinEntrega(),
-        ]);
+        $this->view('entregas/form', ['entrega' => null, 'facturas' => Factura::sinEntrega()]);
     }
 
     public function store(): void
@@ -40,12 +31,7 @@ class EntregaFacturaController extends Controller
 
         $entregaCreada = EntregaFactura::findConDetalle($id);
         $descripcionCrear = $entregaCreada
-            ? sprintf(
-                'Creó el registro de entrega: OCE %s — Proforma %s — %s',
-                $entregaCreada['n_oce_interna'] ?: '(sin número)',
-                $entregaCreada['n_proforma'] ?: '(sin número)',
-                $entregaCreada['proveedor_nombre'] ?? 'proveedor no especificado'
-              )
+            ? sprintf('Creó el registro de entrega: Factura %s — OCE %s — Proforma %s — %s', $entregaCreada['n_factura'] ?: '(sin número)', $entregaCreada['n_oce_interna'] ?: '(sin número)', $entregaCreada['n_proforma'] ?: '(sin número)', $entregaCreada['proveedor_nombre'] ?? 'proveedor no especificado')
             : 'Creó el registro de entrega';
         EntregaFactura::registrarHistorial($id, Auth::id(), $descripcionCrear);
 
@@ -57,34 +43,24 @@ class EntregaFacturaController extends Controller
     {
         $id = (int) $params['id'];
         $entrega = EntregaFactura::findConDetalle($id);
-
         if (!$entrega) {
             http_response_code(404);
             $this->view('errors/404_inline', []);
             return;
         }
-
-        $this->view('entregas/show', [
-            'entrega'   => $entrega,
-            'historial' => EntregaFactura::historialDe($id),
-        ]);
+        $this->view('entregas/show', ['entrega' => $entrega, 'historial' => EntregaFactura::historialDe($id)]);
     }
 
     public function edit(array $params): void
     {
         $id = (int) $params['id'];
-        $entrega = EntregaFactura::find($id);
-
+        $entrega = EntregaFactura::findConDetalle($id);
         if (!$entrega) {
             http_response_code(404);
             $this->view('errors/404_inline', []);
             return;
         }
-
-        $this->view('entregas/form', [
-            'entrega'  => $entrega,
-            'facturas' => Factura::sinEntrega($entrega['factura_id']),
-        ]);
+        $this->view('entregas/form', ['entrega' => $entrega, 'facturas' => Factura::sinEntrega($entrega['factura_id'])]);
     }
 
     public function update(array $params): void
@@ -92,7 +68,6 @@ class EntregaFacturaController extends Controller
         $this->verifyCsrf();
         $id = (int) $params['id'];
         $actual = EntregaFactura::find($id);
-
         $data = $this->collectFormData();
 
         $eliminarPdf = $this->input('eliminar_pdf', '0') === '1';
@@ -109,12 +84,7 @@ class EntregaFacturaController extends Controller
 
         $entregaActualizada = EntregaFactura::findConDetalle($id);
         $descripcionActualizar = $entregaActualizada
-            ? sprintf(
-                'Actualizó los datos de la entrega: OCE %s — Proforma %s — %s',
-                $entregaActualizada['n_oce_interna'] ?: '(sin número)',
-                $entregaActualizada['n_proforma'] ?: '(sin número)',
-                $entregaActualizada['proveedor_nombre'] ?? 'proveedor no especificado'
-              )
+            ? sprintf('Actualizó los datos de la entrega: Factura %s — OCE %s — Proforma %s — %s', $entregaActualizada['n_factura'] ?: '(sin número)', $entregaActualizada['n_oce_interna'] ?: '(sin número)', $entregaActualizada['n_proforma'] ?: '(sin número)', $entregaActualizada['proveedor_nombre'] ?? 'proveedor no especificado')
             : 'Actualizó los datos de la entrega';
         EntregaFactura::registrarHistorial($id, Auth::id(), $descripcionActualizar);
 
@@ -133,16 +103,11 @@ class EntregaFacturaController extends Controller
         }
 
         $descripcion = $entrega
-            ? sprintf(
-                'Eliminó la entrega: OCE %s — Proforma %s — %s',
-                $entrega['n_oce_interna'] ?: '(sin número)',
-                $entrega['n_proforma'] ?: '(sin número)',
-                $entrega['proveedor_nombre'] ?? 'proveedor no especificado'
-              )
+            ? sprintf('Eliminó la entrega: Factura %s — OCE %s — Proforma %s — %s', $entrega['n_factura'] ?: '(sin número)', $entrega['n_oce_interna'] ?: '(sin número)', $entrega['n_proforma'] ?: '(sin número)', $entrega['proveedor_nombre'] ?? 'proveedor no especificado')
             : 'Eliminó la entrega';
 
         EntregaFactura::registrarHistorial($id, Auth::id(), $descripcion);
-        EntregaFactura::delete($id);
+        EntregaFactura::softDelete($id, Auth::id());
 
         $this->flash('success', 'Entrega eliminada.');
         $this->redirect('/entregas');
@@ -151,15 +116,12 @@ class EntregaFacturaController extends Controller
     private function collectFormData(): array
     {
         $campos = ['factura_id', 'fecha_entrega_dueno', 'fecha_solicitud_revision_pago', 'comentario'];
-
         $data = [];
         foreach ($campos as $campo) {
             $valor = $this->input($campo, null);
             $data[$campo] = ($valor === '' || $valor === null) ? null : $valor;
         }
-
         $data['factura_id'] = (int) $data['factura_id'];
-
         return $data;
     }
 }

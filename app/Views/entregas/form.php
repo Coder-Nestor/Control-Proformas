@@ -49,7 +49,7 @@ $val = fn($campo) => e($e[$campo] ?? '');
                             <option value="">Selecciona una factura...</option>
                             <?php foreach ($facturas as $f): ?>
                                 <option value="<?= (int) $f['id'] ?>" <?= (string) ($e['factura_id'] ?? '') === (string) $f['id'] ? 'selected' : '' ?>>
-                                    N° OCE <?= e($f['n_oce_interna'] ?: '#' . $f['id']) ?> — Proforma <?= e($f['n_proforma'] ?? '') ?> (<?= e($f['proveedor_nombre'] ?? '') ?>)
+                                    Factura <?= !empty($f['n_factura']) ? e($f['n_factura']) : '(Sin N°)' ?> — N° OCE <?= e($f['n_oce_interna'] ?: '—') ?> — Proforma <?= e($f['n_proforma'] ?? '') ?> (<?= e($f['proveedor_nombre'] ?? '') ?>)
                                 </option>
                             <?php endforeach; ?>
                         </select>
@@ -100,7 +100,7 @@ $val = fn($campo) => e($e[$campo] ?? '');
                     </div>
                 </div>
                 <div class="form-check mb-3 d-none" id="avisoEliminarPdf">
-                    <input class="form-check-input" type="checkbox" name="eliminar_pdf" value="1" id="eliminarPdfCheckbox" checked>
+                    <input class="form-check-input" type="checkbox" name="eliminar_pdf" value="1" id="eliminarPdfCheckbox">
                     <label class="form-check-label text-danger small" for="eliminarPdfCheckbox">
                         Se eliminará el documento actual al guardar. Si subes un archivo nuevo abajo, se usará ese en su lugar.
                     </label>

@@ -9,6 +9,8 @@ use App\Models\Proveedor;
 use App\Models\Trabajo;
 use App\Models\Gestion;
 use App\Models\OrdenCompra;
+use App\Models\Factura;
+use App\Models\EntregaFactura;
 use App\Models\Area;
 
 class ProformaController extends Controller
@@ -17,36 +19,18 @@ class ProformaController extends Controller
 
     public function index(): void
     {
-        $filtros = [
-            'proveedor_id' => $this->input('proveedor_id', ''),
-            'sin_oc'       => $this->input('sin_oc', ''),
-            'buscar'       => $this->input('buscar', ''),
-        ];
-
+        $filtros = ['proveedor_id' => $this->input('proveedor_id', ''), 'sin_oc' => $this->input('sin_oc', ''), 'buscar' => $this->input('buscar', '')];
         $paginaActual = max(1, (int) $this->input('pagina', 1));
-        $porPagina    = self::POR_PAGINA;
-
+        $porPagina = self::POR_PAGINA;
         $totalRegistros = Proforma::contarConDetalle($filtros);
-        $totalPaginas   = max(1, (int) ceil($totalRegistros / $porPagina));
-
-        if ($paginaActual > $totalPaginas) {
-            $paginaActual = $totalPaginas;
-        }
-
+        $totalPaginas = max(1, (int) ceil($totalRegistros / $porPagina));
+        if ($paginaActual > $totalPaginas) $paginaActual = $totalPaginas;
         $offset = ($paginaActual - 1) * $porPagina;
-
         $proformas = Proforma::allConDetalle($filtros, $porPagina, $offset);
 
         $this->view('proformas/index', [
-            'proformas'   => $proformas,
-            'proveedores' => Proveedor::activos(),
-            'filtros'     => $filtros,
-            'paginacion'  => [
-                'pagina_actual'   => $paginaActual,
-                'total_paginas'   => $totalPaginas,
-                'total_registros' => $totalRegistros,
-                'por_pagina'      => $porPagina,
-            ],
+            'proformas' => $proformas, 'proveedores' => Proveedor::activos(), 'filtros' => $filtros,
+            'paginacion' => ['pagina_actual' => $paginaActual, 'total_paginas' => $totalPaginas, 'total_registros' => $totalRegistros, 'por_pagina' => $porPagina],
         ]);
     }
 
@@ -54,47 +38,66 @@ class ProformaController extends Controller
     {
         $prefill = null;
         $trabajoId = $this->input('trabajo_id', null);
-
         if ($trabajoId !== null && $trabajoId !== '') {
             $trabajo = Trabajo::findConGestion((int) $trabajoId);
             if ($trabajo) {
+                // El proveedor de esa Gestión debe estar habilitado para pasar
+                // a Proforma — si no lo está, se corta aquí mismo y se manda
+                // de vuelta a la Gestión con una explicación.
+                if (!Proveedor::estaHabilitadoParaProforma((int) $trabajo['proveedor_id'])) {
+                    $this->flash('error', 'El proveedor de esta gestión no está habilitado para pasar a Proforma. Solo los proveedores seleccionados pueden continuar el proceso.');
+                    $this->redirect('/gestiones/' . $trabajo['gestion_id']);
+                }
                 $prefill = [
-                    'trabajo_id'   => $trabajo['id'],
+                    'trabajo_id' => $trabajo['id'],
                     'n_cotizacion' => $trabajo['n_cotizacion'],
                     'proveedor_id' => $trabajo['proveedor_id'],
+                    'solicitado_por' => $trabajo['solicitado_por'] ?? null,
+                    // Descripción y valor: para que una mensualidad traída desde
+                    // una Gestión no obligue a volver a escribir lo mismo dos veces.
+                    'trabajo' => $trabajo['descripcion'] ?? null,
+                    'valor_cotizacion' => $trabajo['valor'] ?? null,
+                    // Para una mensualidad, el "valor de proforma" es prácticamente
+                    // el mismo monto del trabajo — se precarga para no hacer que
+                    // el usuario lo vuelva a escribir.
+                    'valor_proforma' => $trabajo['valor'] ?? null,
                 ];
             }
         }
-
         $this->view('proformas/form', [
-            'proforma'    => null,
-            'prefill'     => $prefill,
-            'proveedores' => Proveedor::activos(),
-            'areas'       => Area::activas(),
+            'proforma' => null,
+            'prefill' => $prefill,
+            'proveedores' => Proveedor::habilitadosParaProforma(),
+            'areas' => Area::activas(),
+            'cotizaciones' => Gestion::cotizacionesDisponibles(),
         ]);
     }
 
-    /** Endpoint AJAX: busca trabajos por N° de Cotización, para el formulario de Proforma. */
     public function buscarTrabajosPorCotizacion(): void
     {
         $numero = $this->input('numero', '');
-        $trabajos = [];
-
-        if ($numero !== '') {
-            $trabajos = Trabajo::porNumeroCotizacion($numero);
-        }
-
+        $trabajos = $numero !== '' ? Trabajo::porNumeroCotizacion($numero) : [];
         header('Content-Type: application/json');
-        echo json_encode([
-            'success' => true,
-            'trabajos' => $trabajos,
-        ]);
+        echo json_encode(['success' => true, 'trabajos' => $trabajos]);
     }
 
     public function store(): void
     {
         $this->verifyCsrf();
         $data = $this->collectFormData();
+
+        if (!Proveedor::estaHabilitadoParaProforma((int) $data['proveedor_id'])) {
+            $this->flash('error', 'El proveedor de esta gestión no está habilitado para pasar a Proforma. Solo los proveedores seleccionados pueden continuar el proceso.');
+            $this->view('proformas/form', [
+                'proforma' => $data,
+                'prefill' => null,
+                'proveedores' => Proveedor::habilitadosParaProforma(),
+                'areas' => Area::activas(),
+                'cotizaciones' => Gestion::cotizacionesDisponibles(),
+            ]);
+            return;
+        }
+
         $data['documento_pdf'] = $this->handleUpload('documento_pdf', 'proformas');
         $data['creado_por'] = Auth::id();
 
@@ -102,11 +105,7 @@ class ProformaController extends Controller
 
         $proformaCreada = Proforma::findConDetalle($id);
         $descripcionCrear = $proformaCreada
-            ? sprintf(
-                'Creó la proforma: %s — %s',
-                $proformaCreada['n_proforma'] ?: '(sin número)',
-                $proformaCreada['proveedor_nombre'] ?? 'proveedor no especificado'
-              )
+            ? sprintf('Creó la proforma: %s — %s', $proformaCreada['n_proforma'] ?: '(sin número)', $proformaCreada['proveedor_nombre'] ?? 'proveedor no especificado')
             : 'Creó la proforma';
         Proforma::registrarHistorial($id, Auth::id(), $descripcionCrear);
 
@@ -120,48 +119,49 @@ class ProformaController extends Controller
     {
         $id = (int) $params['id'];
         $proforma = Proforma::findConDetalle($id);
-
         if (!$proforma) {
             http_response_code(404);
             $this->view('errors/404_inline', []);
             return;
         }
-
-        $this->view('proformas/show', [
-            'proforma'  => $proforma,
-            'trabajos'  => Trabajo::deProforma($id),
-            'oc'        => OrdenCompra::findPorProforma($id),
-            'historial' => Proforma::historialDe($id),
-        ]);
+        $this->view('proformas/show', ['proforma' => $proforma, 'trabajos' => Trabajo::deProforma($id), 'oc' => OrdenCompra::findPorProforma($id), 'historial' => Proforma::historialDe($id)]);
     }
 
     public function edit(array $params): void
     {
         $id = (int) $params['id'];
-        $proforma = Proforma::find($id);
-
+        $proforma = Proforma::findConDetalle($id);
         if (!$proforma) {
             http_response_code(404);
             $this->view('errors/404_inline', []);
             return;
         }
-
-        // Si esta proforma tiene exactamente un trabajo vinculado (el caso normal,
-        // ya sea de una cotización real o de una mensualidad escrita a mano),
-        // se precargan sus datos para que el formulario no se vea vacío al editar.
         $trabajos = Trabajo::deProforma($id);
-        if (count($trabajos) === 1) {
+        if (!empty($trabajos)) {
             $t = $trabajos[0];
-            $proforma['trabajo']          = $t['descripcion'];
-            $proforma['valor_cotizacion'] = $t['valor'];
-            $proforma['trabajo_id']       = $t['id'];
-            $proforma['n_cotizacion']     = $t['n_cotizacion'];
+            $proforma['trabajo'] = $proforma['trabajo'] ?: $t['descripcion'];
+            $proforma['valor_cotizacion'] = $proforma['valor_cotizacion'] ?: $t['valor'];
+            $proforma['trabajo_id'] = $t['id'];
+            $proforma['n_cotizacion'] = $proforma['n_cotizacion'] ?: $t['n_cotizacion'];
+        }
+
+        $proveedoresDisponibles = Proveedor::habilitadosParaProforma();
+        // Si esta proforma ya tenía un proveedor de ANTES de esta regla (y
+        // ese proveedor ya no está habilitado), se agrega igual al desplegable
+        // para no dejar el campo en blanco — solo se bloquea CAMBIAR a otro
+        // proveedor no habilitado, no dejar el que ya tenía.
+        if (!empty($proforma['proveedor_id']) && !Proveedor::estaHabilitadoParaProforma((int) $proforma['proveedor_id'])) {
+            $proveedorActual = Proveedor::find((int) $proforma['proveedor_id']);
+            if ($proveedorActual) {
+                $proveedoresDisponibles[] = $proveedorActual;
+            }
         }
 
         $this->view('proformas/form', [
-            'proforma'    => $proforma,
-            'proveedores' => Proveedor::activos(),
-            'areas'       => Area::activas(),
+            'proforma' => $proforma,
+            'proveedores' => $proveedoresDisponibles,
+            'areas' => Area::activas(),
+            'cotizaciones' => Gestion::cotizacionesDisponibles($id),
         ]);
     }
 
@@ -170,8 +170,22 @@ class ProformaController extends Controller
         $this->verifyCsrf();
         $id = (int) $params['id'];
         $actual = Proforma::find($id);
-
         $data = $this->collectFormData();
+
+        // Solo se bloquea si de verdad está CAMBIANDO el proveedor a uno no
+        // habilitado — si deja el mismo que ya tenía (aunque ya no esté
+        // habilitado), lo dejamos editar los demás campos sin problema.
+        $proveedorCambio = (int) $data['proveedor_id'] !== (int) ($actual['proveedor_id'] ?? 0);
+        if ($proveedorCambio && !Proveedor::estaHabilitadoParaProforma((int) $data['proveedor_id'])) {
+            $this->flash('error', 'El proveedor de esta gestión no está habilitado para pasar a Proforma. Solo los proveedores seleccionados pueden continuar el proceso.');
+            $this->view('proformas/form', [
+                'proforma' => array_merge($actual ?? [], $data, ['id' => $id]),
+                'proveedores' => Proveedor::habilitadosParaProforma(),
+                'areas' => Area::activas(),
+                'cotizaciones' => Gestion::cotizacionesDisponibles($id),
+            ]);
+            return;
+        }
 
         $eliminarPdf = $this->input('eliminar_pdf', '0') === '1';
         if ($eliminarPdf && empty($_FILES['documento_pdf']['name'])) {
@@ -187,11 +201,7 @@ class ProformaController extends Controller
 
         $proformaActualizada = Proforma::findConDetalle($id);
         $descripcionActualizar = $proformaActualizada
-            ? sprintf(
-                'Actualizó los datos de la proforma: %s — %s',
-                $proformaActualizada['n_proforma'] ?: '(sin número)',
-                $proformaActualizada['proveedor_nombre'] ?? 'proveedor no especificado'
-              )
+            ? sprintf('Actualizó los datos de la proforma: %s — %s', $proformaActualizada['n_proforma'] ?: '(sin número)', $proformaActualizada['proveedor_nombre'] ?? 'proveedor no especificado')
             : 'Actualizó los datos de la proforma';
         Proforma::registrarHistorial($id, Auth::id(), $descripcionActualizar);
 
@@ -211,66 +221,73 @@ class ProformaController extends Controller
             @unlink(__DIR__ . '/../../public/uploads/proformas/' . $proforma['documento_pdf']);
         }
 
+        // Cascada manual: OC -> Factura -> Entrega
+        $oc = OrdenCompra::findPorProforma($id);
+        if ($oc) {
+            $factura = Factura::findPorOrdenCompra($oc['id']);
+            if ($factura) {
+                $entrega = EntregaFactura::findPorFactura($factura['id']);
+                if ($entrega) {
+                    EntregaFactura::registrarHistorial($entrega['id'], Auth::id(), 'Eliminada automáticamente (cascada al eliminar la proforma)');
+                    EntregaFactura::softDelete($entrega['id'], Auth::id());
+                }
+                Factura::registrarHistorial($factura['id'], Auth::id(), 'Eliminada automáticamente (cascada al eliminar la proforma)');
+                Factura::softDelete($factura['id'], Auth::id());
+            }
+            OrdenCompra::registrarHistorial($oc['id'], Auth::id(), 'Eliminada automáticamente (cascada al eliminar la proforma)');
+            OrdenCompra::softDelete($oc['id'], Auth::id());
+        }
+
         $descripcion = $proforma
-            ? sprintf(
-                'Eliminó la proforma: %s — %s',
-                $proforma['n_proforma'] ?: '(sin número)',
-                $proforma['proveedor_nombre'] ?? 'proveedor no especificado'
-              )
+            ? sprintf('Eliminó la proforma: %s — %s', $proforma['n_proforma'] ?: '(sin número)', $proforma['proveedor_nombre'] ?? 'proveedor no especificado')
             : 'Eliminó la proforma';
 
-        // Los trabajos que apuntaban a esta proforma quedan "sin asignar" (ON DELETE SET NULL).
-        // La OC asociada, si existe, se elimina en cascada (ON DELETE CASCADE).
+        Trabajo::desasignarPorProforma($id);
         Proforma::registrarHistorial($id, Auth::id(), $descripcion);
-        Proforma::delete($id);
+        Proforma::softDelete($id, Auth::id());
 
         $this->flash('success', 'Proforma eliminada. Los trabajos asociados quedaron sin asignar.');
         $this->redirect('/proformas');
     }
 
-    /**
-     * Vincula un Trabajo a la Proforma recién creada/editada, en cualquiera
-     * de los 2 flujos del formulario:
-     *
-     *  A) Con N° de Cotización: el usuario eligió un trabajo YA EXISTENTE
-     *     (viene en $_POST['trabajo_id']) — solo hace falta asignarlo.
-     *
-     *  B) Mensualidad (sin cotización): el usuario escribió el trabajo a
-     *     mano. Como no existe ninguna Gestión/Trabajo detrás, hay que
-     *     CREARLOS aquí mismo para que la proforma sí tenga un trabajo real
-     *     vinculado (antes esto no pasaba y por eso quedaba en "0 trabajos").
-     */
     private function vincularTrabajo(int $proformaId, array $dataProforma, bool $esEdicion = false): void
     {
         $trabajoId = $this->input('trabajo_id', null);
         $nCotizacion = $this->input('n_cotizacion', null);
-        $descripcion = $this->input('trabajo', null);
+        $descripcion = $this->input('trabajo', null) ?: $this->input('trabajo_manual', null);
         $valor = $this->input('valor_cotizacion', null);
         $valor = ($valor === '' || $valor === null) ? null : $valor;
 
-        // Caso A: ya eligió un trabajo existente desde la búsqueda por cotización.
+        if ($valor === null && !empty($dataProforma['valor_proforma'])) {
+            $valor = $dataProforma['valor_proforma'];
+        }
+
         if ($trabajoId !== null && $trabajoId !== '') {
-            if ($esEdicion) {
-                Trabajo::desasignarPorProforma($proformaId);
-            }
+            if ($esEdicion) Trabajo::desasignarPorProforma($proformaId);
             Trabajo::asignarProforma((int) $trabajoId, $proformaId);
+
+            $trabajo = Trabajo::findConGestion((int) $trabajoId);
+            if ($trabajo) {
+                Proforma::update($proformaId, [
+                    'n_cotizacion'     => $trabajo['n_cotizacion'] ?? $nCotizacion,
+                    'trabajo'          => $trabajo['descripcion'] ?? $descripcion,
+                    'valor_cotizacion' => $trabajo['valor'] ?? $valor,
+                ]);
+            }
             return;
         }
 
-        // Caso B: mensualidad — sin cotización, pero con una descripción escrita a mano.
         if (empty($nCotizacion) && !empty($descripcion)) {
             $trabajosActuales = $esEdicion ? Trabajo::deProforma($proformaId) : [];
-
             if (!empty($trabajosActuales)) {
-                // Ya existía un trabajo "mensualidad" para esta proforma: se actualiza,
-                // en vez de crear uno nuevo cada vez que se guarda.
-                Trabajo::update($trabajosActuales[0]['id'], [
-                    'descripcion' => $descripcion,
-                    'valor'       => $valor,
+                Trabajo::update($trabajosActuales[0]['id'], ['descripcion' => $descripcion, 'valor' => $valor]);
+                Proforma::update($proformaId, [
+                    'n_cotizacion'     => null,
+                    'trabajo'          => $descripcion,
+                    'valor_cotizacion' => $valor,
                 ]);
                 return;
             }
-
             $gestionId = Gestion::insert([
                 'proveedor_id' => $dataProforma['proveedor_id'] ?? null,
                 'solicitado_por' => $dataProforma['solicitado_por'] ?? null,
@@ -279,34 +296,43 @@ class ProformaController extends Controller
                 'creado_por' => Auth::id(),
             ]);
             Gestion::registrarHistorial($gestionId, Auth::id(), 'Creada automáticamente desde una proforma de mensualidad');
-
-            Trabajo::reemplazarDeGestion($gestionId, [[
-                'descripcion' => $descripcion,
-                'valor'       => $valor,
-                'proforma_id' => $proformaId,
-            ]]);
+            Trabajo::reemplazarDeGestion($gestionId, [['descripcion' => $descripcion, 'valor' => $valor, 'proforma_id' => $proformaId]]);
+            Proforma::update($proformaId, [
+                'n_cotizacion'     => null,
+                'trabajo'          => $descripcion,
+                'valor_cotizacion' => $valor,
+            ]);
         }
     }
 
-    /**
-     * Campos del encabezado de la Proforma. OJO: la tabla `proformas` NO tiene
-     * columnas de n_cotizacion/trabajo/valor_cotizacion — esa información vive
-     * en la tabla `trabajos`, vinculada por trabajo_id (ver vincularTrabajo()).
-     */
     private function collectFormData(): array
     {
-        $campos = [
-            'proveedor_id', 'fecha_solicitud', 'solicitado_por',
-            'n_proforma', 'valor_proforma', 'fecha_revision_proforma', 'comentario',
-        ];
-
+        $campos = ['proveedor_id', 'fecha_solicitud', 'solicitado_por', 'n_cotizacion', 'trabajo', 'valor_cotizacion', 'n_proforma', 'valor_proforma', 'fecha_revision_proforma', 'comentario'];
         $data = [];
         foreach ($campos as $campo) {
             $valor = $this->input($campo, null);
             $data[$campo] = ($valor === '' || $valor === null) ? null : $valor;
         }
-
         $data['proveedor_id'] = $data['proveedor_id'] !== null ? (int) $data['proveedor_id'] : null;
+
+        // Si se envió trabajo_manual en vez de trabajo
+        if (empty($data['trabajo']) && !empty($this->input('trabajo_manual', ''))) {
+            $data['trabajo'] = $this->input('trabajo_manual');
+        }
+
+        // Si se seleccionó un trabajo_id, sincronizar automáticamente
+        $trabajoId = $this->input('trabajo_id', null);
+        if (!empty($trabajoId)) {
+            $trabajo = Trabajo::findConGestion((int) $trabajoId);
+            if ($trabajo) {
+                $data['trabajo'] = $trabajo['descripcion'];
+                $data['valor_cotizacion'] = $trabajo['valor'];
+                $data['n_cotizacion'] = $trabajo['n_cotizacion'];
+                if (empty($data['proveedor_id']) && !empty($trabajo['proveedor_id'])) {
+                    $data['proveedor_id'] = (int) $trabajo['proveedor_id'];
+                }
+            }
+        }
 
         return $data;
     }

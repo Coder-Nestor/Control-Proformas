@@ -1,0 +1,1 @@
+ALTER TABLE `historial` MODIFY COLUMN `entidad` VARCHAR(50) NOT NULL;

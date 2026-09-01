@@ -71,14 +71,27 @@
                                 <div class="d-flex justify-content-end gap-1">
                                     <?php if (Auth::can('usuarios.gestionar')): ?>
                                         <a href="<?= base_url('/usuarios/' . $u['id'] . '/editar') ?>" class="btn btn-outline-primary btn-sm rounded-pill" title="Editar"><i class="bi bi-pencil"></i></a>
-                                    <?php endif; ?>
-                                    <?php if (Auth::can('usuarios.eliminar')): ?>
-                                        <form method="POST" action="<?= base_url('/usuarios/' . $u['id'] . '/eliminar') ?>" class="d-inline" onsubmit="return confirm('¿Eliminar este usuario?');">
-                                            <?= csrf_field() ?>
-                                            <button class="btn btn-outline-danger btn-sm rounded-pill" title="Eliminar"><i class="bi bi-trash"></i></button>
-                                        </form>
-                                    <?php endif; ?>
-                                    <?php if (!Auth::can('usuarios.gestionar') && !Auth::can('usuarios.eliminar')): ?>
+
+                                        <?php if ((int)$u['id'] === (int)Auth::id()): ?>
+                                            <button class="btn btn-outline-secondary btn-sm rounded-pill px-3" disabled title="No puedes desactivar tu propia cuenta">
+                                                <?= $u['activo'] ? 'Desactivar' : 'Activar' ?>
+                                            </button>
+                                        <?php elseif ($u['activo']): ?>
+                                            <form method="POST" action="<?= base_url('/usuarios/' . $u['id'] . '/toggle-estado') ?>" class="d-inline" onsubmit="return confirm('¿Desactivar a <?= e(addslashes($u['nombre'])) ?>? No podrá iniciar sesión.');">
+                                                <?= csrf_field() ?>
+                                        <button class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+                                            <?= $u['activo'] ? 'Desactivar' : 'Activar' ?>
+                                        </button>
+                                            </form>
+                                        <?php else: ?>
+                                            <form method="POST" action="<?= base_url('/usuarios/' . $u['id'] . '/toggle-estado') ?>" class="d-inline" onsubmit="return confirm('¿Activar a <?= e(addslashes($u['nombre'])) ?>? Podrá iniciar sesión nuevamente.');">
+                                                <?= csrf_field() ?>
+                                            <button class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+                                            <?= $u['activo'] ? 'Desactivar' : 'Activar' ?>
+                                        </button>
+                                            </form>
+                                        <?php endif; ?>
+                                    <?php else: ?>
                                         <span class="text-muted small">—</span>
                                     <?php endif; ?>
                                 </div>

@@ -16,7 +16,7 @@
 <div class="d-flex" id="layout-wrapper">
 
     <nav class="sidebar bg-dark text-white" id="sidebar">
-        <div class="sidebar-brand px-3 py-3 border-bottom border-secondary d-flex align-items-center gap-2">
+        <div class="sidebar-brand px-2 py-3 border-bottom border-secondary d-flex align-items-center gap-2">
             <img src="<?= asset('img/logo.png') ?>" alt="Azucarera Choluteca" class="sidebar-logo" height="44" style="height:44px;width:auto;max-width:100%;">
             <span class="fw-semibold sidebar-brand-text">Control Proformas</span>
         </div>
@@ -101,7 +101,7 @@
 
     <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
-    <div class="flex-grow-1">
+    <div class="flex-grow-1 main-content" id="main-content">
         <header class="topbar d-flex align-items-center justify-content-between px-3 py-2 border-bottom bg-white">
             <button class="btn btn-sm btn-outline-secondary" id="btnToggleSidebar" title="Mostrar/ocultar menú">
                 <i class="bi bi-list"></i>

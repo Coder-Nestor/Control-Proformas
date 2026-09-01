@@ -1,154 +1,161 @@
-document.addEventListener('DOMContentLoaded', function () {
-    var btn = document.getElementById('btnToggleSidebar');
-    var sidebar = document.getElementById('sidebar');
-    var backdrop = document.getElementById('sidebarBackdrop');
+document.addEventListener('DOMContentLoaded', function() {
+    const sidebar = document.getElementById('sidebar');
+    const backdrop = document.getElementById('sidebarBackdrop');
+    const toggleBtn = document.getElementById('btnToggleSidebar');
 
-    function esCelular() {
-        // Coincide con el breakpoint "md" de Bootstrap (767.98px) usado en app.css
-        return window.innerWidth < 768;
-    }
+    if (!sidebar || !toggleBtn) return;
 
-    // Un solo botón, dos comportamientos según el ancho real de pantalla:
-    // - En celular: abre/cierra el sidebar como cajón, con fondo oscuro detrás.
-    // - En tablet/escritorio: solo colapsa el sidebar a una franja de íconos
-    //   (el sidebar sigue siempre visible, nunca se oculta).
-    function toggleSidebar() {
-        var abriendo = !sidebar.classList.contains('sidebar-toggled');
-        sidebar.classList.toggle('sidebar-toggled');
+    const isMobile = () => window.innerWidth < 768;
+    const isTablet = () => window.innerWidth >= 768 && window.innerWidth < 992;
 
-        if (esCelular()) {
-            if (backdrop) backdrop.classList.toggle('show', abriendo);
-            document.body.style.overflow = abriendo ? 'hidden' : '';
+    // Función para alternar el sidebar
+    function toggleSidebar(e) {
+        if (e) e.stopPropagation();
+
+        if (isMobile()) {
+            // Móvil: mostrar/ocultar desde la izquierda
+            sidebar.classList.toggle('sidebar-toggled');
+            if (backdrop) {
+                backdrop.classList.toggle('show');
+            }
+            document.body.style.overflow = sidebar.classList.contains('sidebar-toggled') ? 'hidden' : '';
+        } else {
+            // Desktop/Tablet: colapsar/expandir
+            sidebar.classList.toggle('sidebar-toggled');
+            // Guardar estado en localStorage
+            const isCollapsed = sidebar.classList.contains('sidebar-toggled');
+            try {
+                localStorage.setItem('sidebarCollapsed', JSON.stringify(isCollapsed));
+            } catch (e) {}
         }
     }
 
-    // Solo cierra el cajón en celular (en tablet/escritorio el sidebar
-    // nunca se oculta, así que no hay nada que "cerrar" al navegar).
-    function cerrarSiEsCelular() {
-        if (esCelular()) {
-            sidebar.classList.remove('sidebar-toggled');
-            if (backdrop) backdrop.classList.remove('show');
-            document.body.style.overflow = '';
-        }
-    }
+    // Evento del botón toggle
+    toggleBtn.addEventListener('click', toggleSidebar);
 
-    if (btn && sidebar) {
-        btn.addEventListener('click', toggleSidebar);
-    }
-
+    // Cerrar sidebar al hacer clic en backdrop (móvil)
     if (backdrop) {
-        backdrop.addEventListener('click', cerrarSiEsCelular);
-    }
-
-    // Al elegir una opción del menú en celular, cierra el cajón automáticamente.
-    if (sidebar) {
-        sidebar.querySelectorAll('.nav-link').forEach(function (link) {
-            link.addEventListener('click', cerrarSiEsCelular);
+        backdrop.addEventListener('click', function() {
+            if (isMobile()) {
+                sidebar.classList.remove('sidebar-toggled');
+                backdrop.classList.remove('show');
+                document.body.style.overflow = '';
+            }
         });
     }
-});
 
-/**
- * Inicializa los 3 gráficos del dashboard usando Chart.js (servido localmente).
- * Recibe los datos ya pintados por PHP en window.DASHBOARD_DATA (ver dashboard/index.php)
- * y opcionalmente los refresca vía fetch a /dashboard/data.
- */
-function initDashboardCharts(data) {
-    function mostrarError(canvasId, mensaje) {
-        var canvas = document.getElementById(canvasId);
-        if (!canvas) {
-            console.error('Dashboard: no existe el elemento #' + canvasId + ' en la página.');
-            return;
-        }
-        var contenedor = canvas.parentElement;
-        contenedor.innerHTML =
-            '<div class="d-flex align-items-center justify-content-center h-100 text-danger small text-center p-2">' +
-            '<div><i class="bi bi-exclamation-triangle d-block mb-1" style="font-size:1.3rem;"></i>' + mensaje + '</div></div>';
-    }
-
-    function dibujarDoughnut(canvasId, bloque) {
-        var el = document.getElementById(canvasId);
-        if (!el) {
-            return; // este gráfico no está en esta página, no es un error
-        }
-        if (typeof Chart === 'undefined') {
-            mostrarError(canvasId, 'No se cargó la librería de gráficos (Chart.js). Revisa que el archivo exista en public/assets/vendor/chartjs/chart.js');
-            return;
-        }
-        if (!bloque || !bloque.labels || !bloque.values) {
-            mostrarError(canvasId, 'No llegaron datos desde el servidor para este gráfico.');
-            return;
-        }
-        if (bloque.values.every(function (v) { return !v; })) {
-            el.parentElement.innerHTML = '<div class="d-flex align-items-center justify-content-center h-100 text-muted small">Todavía no hay datos suficientes.</div>';
-            return;
-        }
+    // Restaurar estado del sidebar en desktop/tablet
+    if (!isMobile()) {
         try {
-            new Chart(el, {
-                type: 'doughnut',
-                data: {
-                    labels: bloque.labels,
-                    datasets: [{ data: bloque.values, backgroundColor: ['#198754', '#ffc107', '#dc3545'] }]
-                },
-                options: { plugins: { legend: { position: 'bottom' } }, maintainAspectRatio: false }
-            });
-        } catch (err) {
-            console.error('Error al dibujar ' + canvasId + ':', err);
-            mostrarError(canvasId, 'Error al dibujar el gráfico: ' + err.message);
-        }
-    }
-
-    dibujarDoughnut('chartFacturaEstado', data.facturaEstado);
-    dibujarDoughnut('chartEstados', data.ocEstado);
-
-    var elProveedores = document.getElementById('chartProveedores');
-    if (elProveedores && data.porProveedor) {
-        try {
-            new Chart(elProveedores, {
-                type: 'bar',
-                data: {
-                    labels: data.porProveedor.labels,
-                    datasets: [{ label: 'Monto (L.)', data: data.porProveedor.values, backgroundColor: '#0d6efd' }]
-                },
-                options: {
-                    plugins: { legend: { display: false } },
-                    maintainAspectRatio: false,
-                    scales: { y: { beginAtZero: true } }
+            const savedState = localStorage.getItem('sidebarCollapsed');
+            if (savedState !== null) {
+                const isCollapsed = JSON.parse(savedState);
+                if (isCollapsed) {
+                    sidebar.classList.add('sidebar-toggled');
                 }
-            });
-        } catch (err) {
-            console.error('Error al dibujar chartProveedores:', err);
-            mostrarError('chartProveedores', 'Error al dibujar el gráfico: ' + err.message);
-        }
+            }
+        } catch (e) {}
     }
 
-    var elTendencia = document.getElementById('chartTendencia');
-    if (elTendencia) {
-        if (typeof Chart === 'undefined') {
-            mostrarError('chartTendencia', 'No se cargó la librería de gráficos (Chart.js).');
-        } else if (!data.tendencia || !data.tendencia.labels || !data.tendencia.labels.length) {
-            elTendencia.parentElement.innerHTML = '<div class="d-flex align-items-center justify-content-center h-100 text-muted small">Todavía no hay suficientes gestiones registradas para mostrar una tendencia.</div>';
-        } else {
-            try {
-                new Chart(elTendencia, {
-                    type: 'line',
-                    data: {
-                        labels: data.tendencia.labels,
-                        datasets: [{
-                            label: 'Gestiones por mes',
-                            data: data.tendencia.values,
-                            borderColor: '#198754',
-                            backgroundColor: 'rgba(25,135,84,.15)',
-                            tension: .3,
-                            fill: true
-                        }]
-                    },
-                    options: { plugins: { legend: { display: false } }, maintainAspectRatio: false }
-                });
-            } catch (err) {
-                console.error('Error al dibujar chartTendencia:', err);
-                mostrarError('chartTendencia', 'Error al dibujar el gráfico: ' + err.message);
+    // Manejar cambio de tamaño de ventana
+    let resizeTimer;
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function() {
+            if (isMobile()) {
+                // En móvil, resetear y asegurar que el sidebar esté oculto
+                sidebar.classList.remove('sidebar-toggled');
+                if (backdrop) {
+                    backdrop.classList.remove('show');
+                }
+                document.body.style.overflow = '';
+                toggleBtn.style.display = 'inline-flex';
+            } else {
+                // En desktop/tablet, ocultar backdrop si está visible
+                if (backdrop) {
+                    backdrop.classList.remove('show');
+                }
+                sidebar.classList.remove('sidebar-toggled-mobile');
+
+                // Restaurar estado colapsado si existe
+                if (!isMobile()) {
+                    try {
+                        const savedState = localStorage.getItem('sidebarCollapsed');
+                        if (savedState !== null) {
+                            const isCollapsed = JSON.parse(savedState);
+                            if (isCollapsed) {
+                                sidebar.classList.add('sidebar-toggled');
+                            } else {
+                                sidebar.classList.remove('sidebar-toggled');
+                            }
+                        }
+                    } catch (e) {}
+                }
+
+                // Mostrar/ocultar botón toggle según dispositivo
+                if (isTablet()) {
+                    toggleBtn.style.display = 'inline-flex';
+                } else {
+                    toggleBtn.style.display = 'none';
+                }
+            }
+        }, 300);
+    });
+
+    // Cerrar sidebar con tecla ESC (móvil)
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && isMobile()) {
+            sidebar.classList.remove('sidebar-toggled');
+            if (backdrop) {
+                backdrop.classList.remove('show');
+            }
+            document.body.style.overflow = '';
+        }
+    });
+
+    // Cerrar sidebar al hacer clic fuera (móvil)
+    document.addEventListener('click', function(e) {
+        if (isMobile() && sidebar.classList.contains('sidebar-toggled')) {
+            if (!sidebar.contains(e.target) && e.target !== toggleBtn && !toggleBtn.contains(e.target)) {
+                sidebar.classList.remove('sidebar-toggled');
+                if (backdrop) {
+                    backdrop.classList.remove('show');
+                }
+                document.body.style.overflow = '';
             }
         }
+    });
+
+    // Inicializar visibilidad del botón toggle
+    if (isMobile() || isTablet()) {
+        toggleBtn.style.display = 'inline-flex';
+    } else {
+        toggleBtn.style.display = 'none';
     }
-}
+
+    // ============================================
+    // DETECTAR SCROLL EN TABLAS
+    // ============================================
+    
+    const tableWrappers = document.querySelectorAll('.table-wrapper');
+    tableWrappers.forEach(wrapper => {
+        function checkScroll() {
+            if (wrapper.scrollWidth > wrapper.clientWidth) {
+                wrapper.classList.add('has-scroll');
+            } else {
+                wrapper.classList.remove('has-scroll');
+            }
+        }
+        
+        // Verificar al cargar
+        checkScroll();
+        
+        // Verificar al hacer scroll
+        wrapper.addEventListener('scroll', checkScroll);
+        
+        // Verificar al redimensionar
+        window.addEventListener('resize', checkScroll);
+    });
+
+    console.log('✅ Sidebar inicializado correctamente');
+});

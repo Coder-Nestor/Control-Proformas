@@ -12,6 +12,7 @@ use App\Models\Area;
 use App\Models\OrdenCompra;
 use App\Models\Factura;
 use App\Models\EntregaFactura;
+use App\Models\Documento;
 
 class GestionController extends Controller
 {
@@ -75,10 +76,10 @@ class GestionController extends Controller
             return;
         }
 
-        $data['documento_pdf'] = $this->handleUpload('documento_pdf', 'gestiones');
         $data['creado_por'] = Auth::id();
 
         $id = Gestion::insert($data);
+        $this->guardarDocumentos($this->handleMultipleUploads('documentos', 'gestiones'), 'gestion', $id, 'gestiones');
         Trabajo::reemplazarDeGestion($id, $this->collectTrabajos());
 
         $gestionCreada = Gestion::findConDetalle($id);
@@ -100,7 +101,7 @@ class GestionController extends Controller
             $this->view('errors/404_inline', []);
             return;
         }
-        $this->view('gestiones/show', ['gestion' => $gestion, 'trabajos' => Trabajo::deGestion($id), 'historial' => Gestion::historialDe($id)]);
+        $this->view('gestiones/show', ['gestion' => $gestion, 'documentos' => Documento::deEntidad('gestion', $id), 'trabajos' => Trabajo::deGestion($id), 'historial' => Gestion::historialDe($id)]);
     }
 
     public function edit(array $params): void
@@ -114,6 +115,7 @@ class GestionController extends Controller
         }
         $this->view('gestiones/form', [
             'gestion' => $gestion,
+            'documentos' => Documento::deEntidad('gestion', $id),
             'trabajos' => Trabajo::deGestion($id),
             'proveedores' => Proveedor::activos(),
             'proformas' => Proforma::paraSelect(),
@@ -132,6 +134,7 @@ class GestionController extends Controller
             $this->flash('error', 'Ese número de cotización ya está registrado en otra gestión. Elige uno distinto.');
             $this->view('gestiones/form', [
                 'gestion' => array_merge($actual ?? [], $data),
+                'documentos' => Documento::deEntidad('gestion', $id),
                 'trabajos' => $this->collectTrabajos(),
                 'proveedores' => Proveedor::activos(),
                 'proformas' => Proforma::paraSelect(),
@@ -140,17 +143,19 @@ class GestionController extends Controller
             return;
         }
 
-        $eliminarPdf = $this->input('eliminar_pdf', '0') === '1';
-        if ($eliminarPdf && empty($_FILES['documento_pdf']['name'])) {
-            if (!empty($actual['documento_pdf'])) {
-                @unlink(__DIR__ . '/../../public/uploads/gestiones/' . $actual['documento_pdf']);
+        // Procesar eliminación de documentos marcados — primero se borra el
+        // archivo físico de /uploads (necesita el registro ANTES de marcarlo
+        // eliminado, para saber su nombre_archivo), y luego se hace el
+        // borrado lógico en la base de datos.
+        $eliminarDocs = $_POST['eliminar_documentos'] ?? [];
+        if (is_array($eliminarDocs)) {
+            foreach ($eliminarDocs as $docId) {
+                $this->eliminarDocumentoIndividual((int) $docId, 'gestiones');
             }
-            $data['documento_pdf'] = null;
-        } else {
-            $data['documento_pdf'] = $this->handleUpload('documento_pdf', 'gestiones', $actual['documento_pdf'] ?? null);
         }
 
         Gestion::update($id, $data);
+        $this->guardarDocumentos($this->handleMultipleUploads('documentos', 'gestiones'), 'gestion', $id, 'gestiones');
         Trabajo::reemplazarDeGestion($id, $this->collectTrabajos());
 
         $gestionActualizada = Gestion::findConDetalle($id);
@@ -168,21 +173,18 @@ class GestionController extends Controller
         $this->verifyCsrf();
         $id = (int) $params['id'];
 
-        if ($this->algunTrabajoLlegoAEntrega($id) && !Auth::hasRole(['administrador'])) {
+    if ($this->algunTrabajoLlegoAEntrega($id) && !Auth::hasRole(['administrador'])) {
             $this->flash('error', 'Esta gestión tiene al menos un trabajo (cotización o mensualidad) que ya llegó hasta Entrega de factura — solo un Administrador puede eliminarla.');
             $this->redirect('/gestiones/' . $id);
         }
 
         $gestion = Gestion::findConDetalle($id);
-        if ($gestion && !empty($gestion['documento_pdf'])) {
-            @unlink(__DIR__ . '/../../public/uploads/gestiones/' . $gestion['documento_pdf']);
-        }
-
         $descripcion = $gestion
             ? sprintf('Eliminó la gestión: Cotización %s — %s', $gestion['n_cotizacion'] ?: '(sin número)', $gestion['proveedor_nombre'] ?? 'proveedor no especificado')
             : 'Eliminó la gestión';
 
         Gestion::registrarHistorial($id, Auth::id(), $descripcion);
+        $this->eliminarDocumentosDeEntidad('gestion', $id, 'gestiones');
         Gestion::softDelete($id, Auth::id());
 
         $this->flash('success', 'Gestión eliminada.');
@@ -218,6 +220,43 @@ class GestionController extends Controller
         return false;
     }
 
+    /**
+     * Borra físicamente de /uploads UN documento puntual (por su ID) y luego
+     * lo marca como eliminado en la base de datos. El orden importa: hay que
+     * buscar el registro ANTES de marcarlo eliminado, porque find() solo
+     * encuentra registros activos — si se invirtiera el orden, ya no se
+     * podría recuperar el nombre_archivo para borrar el archivo del disco.
+     */
+    private function eliminarDocumentoIndividual(int $docId, string $subdir): void
+    {
+        $doc = Documento::find($docId);
+        if ($doc) {
+            $ruta = __DIR__ . '/../../public/uploads/' . $subdir . '/' . $doc['nombre_archivo'];
+            if (is_file($ruta)) {
+                @unlink($ruta);
+            }
+        }
+        Documento::softDelete($docId, Auth::id());
+    }
+
+    /**
+     * Borra físicamente de /uploads TODOS los documentos activos de una
+     * entidad (ej. al eliminar la gestión completa), y luego los marca como
+     * eliminados en la base de datos — mismo orden que arriba, por la misma
+     * razón: hay que leerlos mientras siguen activos.
+     */
+    private function eliminarDocumentosDeEntidad(string $tipoEntidad, int $idEntidad, string $subdir): void
+    {
+        $documentos = Documento::deEntidad($tipoEntidad, $idEntidad);
+        foreach ($documentos as $doc) {
+            $ruta = __DIR__ . '/../../public/uploads/' . $subdir . '/' . $doc['nombre_archivo'];
+            if (is_file($ruta)) {
+                @unlink($ruta);
+            }
+        }
+        Documento::eliminarDeEntidad($tipoEntidad, $idEntidad, Auth::id());
+    }
+
     private function collectFormData(): array
     {
         $campos = ['proveedor_id', 'solicitado_por', 'aprobado_por', 'fecha_aprobacion_trabajo', 'fecha_finalizacion_trabajo', 'n_cotizacion', 'fecha_revision_cotizacion', 'comentario'];
@@ -236,6 +275,30 @@ class GestionController extends Controller
         }
 
         return $data;
+    }
+
+    private function guardarDocumentos(array $archivos, string $tipoEntidad, int $idEntidad, string $subdir): void
+    {
+        foreach ($archivos as $archivo) {
+            if (is_array($archivo)) {
+                Documento::crearDelArchivo(
+                    $tipoEntidad,
+                    $idEntidad,
+                    $archivo['nombre_archivo'],
+                    $archivo['mime_type'],
+                    (int) $archivo['tamano_bytes'],
+                    Auth::id(),
+                    $archivo['nombre_original'] ?? $archivo['nombre_archivo']
+                );
+            } else {
+                $ruta = __DIR__ . '/../../public/uploads/' . $subdir . '/' . $archivo;
+                $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                $mime = is_file($ruta) ? finfo_file($finfo, $ruta) : 'application/pdf';
+                finfo_close($finfo);
+                $size = is_file($ruta) ? filesize($ruta) : 0;
+                Documento::crearDelArchivo($tipoEntidad, $idEntidad, $archivo, $mime, $size, Auth::id());
+            }
+        }
     }
 
     private function collectTrabajos(): array

@@ -171,16 +171,46 @@ $diasEnCurso = $f['fecha_entrega_factura'] === null ? days_since($f['fecha_envio
                 </div>
             </div>
 
-            <!-- Tarjeta de documento -->
+            <!-- Tarjeta de documentos -->
             <div class="card detail-card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h6 class="fw-bold text-secondary mb-0">
-                        <i class="bi bi-file-earmark-pdf me-2 text-danger"></i>Documento adjunto
+                        <i class="bi bi-paperclip me-2 text-primary"></i>Documentos adjuntos
+                        <?php if (!empty($documentos)): ?>
+                            <span class="badge bg-primary-subtle text-primary fw-medium ms-1"><?= count($documentos) ?></span>
+                        <?php endif; ?>
                     </h6>
-                    <span class="badge bg-light text-muted border">Archivo</span>
+                    <span class="badge bg-light text-muted border">Archivos</span>
                 </div>
                 <div class="card-body">
-                    <?php if (!empty($f['documento_pdf'])): ?>
+                    <?php if (!empty($documentos)): ?>
+                        <div class="d-flex flex-column gap-2">
+                            <?php foreach ($documentos as $doc): ?>
+                                <?php 
+                                    $isPdf = \App\Models\Documento::esPdf($doc['mime_type'] ?? '', $doc['nombre_archivo'] ?? '');
+                                    $tamanoFmt = \App\Models\Documento::formatearTamano((int)($doc['tamano_bytes'] ?? 0));
+                                ?>
+                                <div class="doc-preview-box">
+                                    <div class="doc-icon-wrap <?= $isPdf ? 'bg-danger bg-opacity-10 text-danger' : 'bg-primary bg-opacity-10 text-primary' ?>">
+                                        <i class="bi <?= $isPdf ? 'bi-file-earmark-pdf' : 'bi-file-earmark-image' ?>"></i>
+                                    </div>
+                                    <div class="flex-grow-1 overflow-hidden">
+                                        <div class="fw-semibold text-truncate text-dark" title="<?= e($doc['nombre_original'] ?: $doc['nombre_archivo']) ?>">
+                                            <?= e($doc['nombre_original'] ?: $doc['nombre_archivo']) ?>
+                                        </div>
+                                        <small class="text-muted d-block"><?= $tamanoFmt ?><?= !empty($doc['creado_en']) ? ' • Subido el ' . fmt_date($doc['creado_en']) : '' ?></small>
+                                    </div>
+                                    <div class="flex-shrink-0 d-flex gap-2">
+                                        <a href="<?= base_url('uploads/facturas/' . e($doc['nombre_archivo'])) ?>" 
+                                           target="_blank" 
+                                           class="btn <?= $isPdf ? 'btn-danger' : 'btn-primary' ?> btn-sm rounded-pill px-3 shadow-sm">
+                                            <i class="bi bi-eye me-1"></i> Ver
+                                        </a>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php elseif (!empty($f['documento_pdf'])): ?>
                         <div class="doc-preview-box">
                             <div class="doc-icon-wrap bg-danger bg-opacity-10 text-danger">
                                 <i class="bi bi-file-earmark-pdf"></i>
@@ -202,10 +232,10 @@ $diasEnCurso = $f['fecha_entrega_factura'] === null ? days_since($f['fecha_envio
                     <?php else: ?>
                         <div class="text-center py-4">
                             <i class="bi bi-file-earmark-arrow-up text-muted" style="font-size: 2.5rem;"></i>
-                            <p class="text-muted mb-2 small mt-2">No hay documento adjunto para esta factura.</p>
+                            <p class="text-muted mb-2 small mt-2">No hay documentos adjuntos para esta factura.</p>
                             <?php if (Auth::can('facturas.editar') && ($f['estado'] !== 'correcta' || Auth::hasRole(['administrador']))): ?>
                             <a href="<?= base_url('/facturas/' . $f['id'] . '/editar') ?>" class="btn btn-outline-primary btn-sm rounded-pill px-3">
-                                <i class="bi bi-upload me-1"></i> Subir documento
+                                <i class="bi bi-upload me-1"></i> Subir documentos
                             </a>
                             <?php endif; ?>
                         </div>

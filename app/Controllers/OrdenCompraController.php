@@ -8,6 +8,7 @@ use App\Models\OrdenCompra;
 use App\Models\Proforma;
 use App\Models\Factura;
 use App\Models\EntregaFactura;
+use App\Models\Documento;
 
 class OrdenCompraController extends Controller
 {
@@ -27,10 +28,10 @@ class OrdenCompraController extends Controller
     {
         $this->verifyCsrf();
         $data = $this->collectFormData();
-        $data['documento_pdf'] = $this->handleUpload('documento_pdf', 'ordenes_compra');
         $data['creado_por'] = Auth::id();
 
         $id = OrdenCompra::insert($data);
+        $this->guardarDocumentos($this->handleMultipleUploads('documentos', 'ordenes_compra'), 'orden_compra', $id, 'ordenes_compra');
 
         $ocCreada = OrdenCompra::findConDetalle($id);
         $descripcionCrear = $ocCreada
@@ -51,7 +52,7 @@ class OrdenCompraController extends Controller
             $this->view('errors/404_inline', []);
             return;
         }
-        $this->view('ordenes/show', ['oc' => $oc, 'factura' => Factura::findPorOrdenCompra($id), 'historial' => OrdenCompra::historialDe($id)]);
+        $this->view('ordenes/show', ['oc' => $oc, 'documentos' => Documento::deEntidad('orden_compra', $id), 'factura' => Factura::findPorOrdenCompra($id), 'historial' => OrdenCompra::historialDe($id)]);
     }
 
     public function edit(array $params): void
@@ -63,7 +64,12 @@ class OrdenCompraController extends Controller
             $this->view('errors/404_inline', []);
             return;
         }
-        $this->view('ordenes/form', ['oc' => $oc, 'proformas' => Proforma::sinOrdenDeCompra($oc['proforma_id']), 'estados' => OrdenCompra::ESTADOS]);
+        $this->view('ordenes/form', [
+            'oc' => $oc,
+            'documentos' => Documento::deEntidad('orden_compra', $id),
+            'proformas' => Proforma::sinOrdenDeCompra($oc['proforma_id']),
+            'estados' => OrdenCompra::ESTADOS
+        ]);
     }
 
     public function update(array $params): void
@@ -73,17 +79,19 @@ class OrdenCompraController extends Controller
         $actual = OrdenCompra::find($id);
         $data = $this->collectFormData();
 
-        $eliminarPdf = $this->input('eliminar_pdf', '0') === '1';
-        if ($eliminarPdf && empty($_FILES['documento_pdf']['name'])) {
-            if (!empty($actual['documento_pdf'])) {
-                @unlink(__DIR__ . '/../../public/uploads/ordenes_compra/' . $actual['documento_pdf']);
+        // Procesar eliminación de documentos marcados — primero se borra el
+        // archivo físico de /uploads (necesita el registro ANTES de marcarlo
+        // eliminado, para saber su nombre_archivo), y luego se hace el
+        // borrado lógico en la base de datos.
+        $eliminarDocs = $_POST['eliminar_documentos'] ?? [];
+        if (is_array($eliminarDocs)) {
+            foreach ($eliminarDocs as $docId) {
+                $this->eliminarDocumentoIndividual((int) $docId, 'ordenes_compra');
             }
-            $data['documento_pdf'] = null;
-        } else {
-            $data['documento_pdf'] = $this->handleUpload('documento_pdf', 'ordenes_compra', $actual['documento_pdf'] ?? null);
         }
 
         OrdenCompra::update($id, $data);
+        $this->guardarDocumentos($this->handleMultipleUploads('documentos', 'ordenes_compra'), 'orden_compra', $id, 'ordenes_compra');
 
         $ocActualizada = OrdenCompra::findConDetalle($id);
         $descripcionActualizar = $ocActualizada
@@ -111,10 +119,6 @@ class OrdenCompraController extends Controller
             $this->redirect('/ordenes/' . $id);
         }
 
-        if ($oc && !empty($oc['documento_pdf'])) {
-            @unlink(__DIR__ . '/../../public/uploads/ordenes_compra/' . $oc['documento_pdf']);
-        }
-
         // Cascada manual: Factura -> Entrega
         if ($facturaVinculada) {
             $entrega = EntregaFactura::findPorFactura($facturaVinculada['id']);
@@ -131,10 +135,48 @@ class OrdenCompraController extends Controller
             : 'Eliminó la orden de compra';
 
         OrdenCompra::registrarHistorial($id, Auth::id(), $descripcion);
+        $this->eliminarDocumentosDeEntidad('orden_compra', $id, 'ordenes_compra');
         OrdenCompra::softDelete($id, Auth::id());
 
         $this->flash('success', 'Orden de compra eliminada.');
         $this->redirect('/ordenes');
+    }
+
+    /**
+     * Borra físicamente de /uploads UN documento puntual (por su ID) y luego
+     * lo marca como eliminado en la base de datos. El orden importa: hay que
+     * buscar el registro ANTES de marcarlo eliminado, porque find() solo
+     * encuentra registros activos — si se invirtiera el orden, ya no se
+     * podría recuperar el nombre_archivo para borrar el archivo del disco.
+     */
+    private function eliminarDocumentoIndividual(int $docId, string $subdir): void
+    {
+        $doc = Documento::find($docId);
+        if ($doc) {
+            $ruta = __DIR__ . '/../../public/uploads/' . $subdir . '/' . $doc['nombre_archivo'];
+            if (is_file($ruta)) {
+                @unlink($ruta);
+            }
+        }
+        Documento::softDelete($docId, Auth::id());
+    }
+
+    /**
+     * Borra físicamente de /uploads TODOS los documentos activos de una
+     * entidad (ej. al eliminar la orden de compra completa), y luego los
+     * marca como eliminados en la base de datos — mismo orden que arriba,
+     * por la misma razón: hay que leerlos mientras siguen activos.
+     */
+    private function eliminarDocumentosDeEntidad(string $tipoEntidad, int $idEntidad, string $subdir): void
+    {
+        $documentos = Documento::deEntidad($tipoEntidad, $idEntidad);
+        foreach ($documentos as $doc) {
+            $ruta = __DIR__ . '/../../public/uploads/' . $subdir . '/' . $doc['nombre_archivo'];
+            if (is_file($ruta)) {
+                @unlink($ruta);
+            }
+        }
+        Documento::eliminarDeEntidad($tipoEntidad, $idEntidad, Auth::id());
     }
 
     private function collectFormData(): array
@@ -148,5 +190,29 @@ class OrdenCompraController extends Controller
         $data['proforma_id'] = (int) $data['proforma_id'];
         if (!array_key_exists($data['estado'], OrdenCompra::ESTADOS)) $data['estado'] = 'pendiente';
         return $data;
+    }
+
+    private function guardarDocumentos(array $archivos, string $tipoEntidad, int $idEntidad, string $subdir): void
+    {
+        foreach ($archivos as $archivo) {
+            if (is_array($archivo)) {
+                Documento::crearDelArchivo(
+                    $tipoEntidad,
+                    $idEntidad,
+                    $archivo['nombre_archivo'],
+                    $archivo['mime_type'],
+                    (int) $archivo['tamano_bytes'],
+                    Auth::id(),
+                    $archivo['nombre_original'] ?? $archivo['nombre_archivo']
+                );
+            } else {
+                $ruta = __DIR__ . '/../../public/uploads/' . $subdir . '/' . $archivo;
+                $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                $mime = is_file($ruta) ? finfo_file($finfo, $ruta) : 'application/pdf';
+                finfo_close($finfo);
+                $size = is_file($ruta) ? filesize($ruta) : 0;
+                Documento::crearDelArchivo($tipoEntidad, $idEntidad, $archivo, $mime, $size, Auth::id());
+            }
+        }
     }
 }

@@ -60,10 +60,10 @@ class Controller
     }
 
     /**
-     * Procesa la subida de un PDF escaneado desde un campo <input type="file">.
+     * Procesa la subida de un documento desde un campo <input type="file">.
      * - Si no se subió archivo nuevo, conserva el que ya existía ($oldFile).
-     * - Valida que el contenido real sea application/pdf (no solo la extensión).
-     * - Limita el tamaño a 10 MB.
+     * - Valida tipos permitidos (PDF e imágenes).
+     * - Limita el tamaño a 5 MB.
      * - Si se sube uno nuevo y ya existía uno anterior, borra el anterior.
      *
      * @param string      $field   Nombre del input file (ej. 'documento_pdf')
@@ -72,34 +72,46 @@ class Controller
      */
     protected function handleUpload(string $field, string $subdir, ?string $oldFile = null): ?string
     {
-        if (empty($_FILES[$field]['name']) || $_FILES[$field]['error'] === UPLOAD_ERR_NO_FILE) {
+        $fieldKey = rtrim($field, '[]');
+        $file = $_FILES[$fieldKey] ?? $_FILES[$field] ?? null;
+
+        if (!$file || empty($file['name']) || (is_array($file['error']) ? ($file['error'][0] ?? UPLOAD_ERR_NO_FILE) : $file['error']) === UPLOAD_ERR_NO_FILE) {
             return $oldFile;
         }
 
-        $file = $_FILES[$field];
+        // Si vino como array múltiple pero se pide un solo archivo
+        if (is_array($file['name'])) {
+            $name = $file['name'][0] ?? '';
+            $error = $file['error'][0] ?? UPLOAD_ERR_NO_FILE;
+            $size = $file['size'][0] ?? 0;
+            $tmpName = $file['tmp_name'][0] ?? '';
+        } else {
+            $name = $file['name'];
+            $error = $file['error'];
+            $size = $file['size'];
+            $tmpName = $file['tmp_name'];
+        }
 
-        if ($file['error'] !== UPLOAD_ERR_OK) {
+        if ($error !== UPLOAD_ERR_OK) {
             $this->flash('error', 'Ocurrió un error al subir el archivo. Inténtalo de nuevo.');
             return $oldFile;
         }
 
-        if ($file['size'] > 10 * 1024 * 1024) {
-            $this->flash('error', 'El archivo no debe superar 10 MB.');
+        if ($size > 5 * 1024 * 1024) {
+            $this->flash('error', 'El archivo no debe superar 5 MB.');
             return $oldFile;
         }
 
         $finfo = finfo_open(FILEINFO_MIME_TYPE);
-        $mime = finfo_file($finfo, $file['tmp_name']);
+        $mime = finfo_file($finfo, $tmpName);
         finfo_close($finfo);
 
-        // Se acepta PDF o imágenes (JPG, PNG, GIF, WEBP) — la extensión final
-        // se decide por el tipo MIME real del archivo, no por su nombre.
         $extensionesPermitidas = [
             'application/pdf' => 'pdf',
-            'image/jpeg'       => 'jpg',
-            'image/png'        => 'png',
-            'image/gif'        => 'gif',
-            'image/webp'       => 'webp',
+            'image/jpeg'      => 'jpg',
+            'image/png'       => 'png',
+            'image/gif'       => 'gif',
+            'image/webp'      => 'webp',
         ];
 
         if (!isset($extensionesPermitidas[$mime])) {
@@ -109,8 +121,7 @@ class Controller
         $extension = $extensionesPermitidas[$mime];
 
         $dir = __DIR__ . '/../public/uploads/' . $subdir;
-        $carpetaNueva = !is_dir($dir);
-        if ($carpetaNueva) {
+        if (!is_dir($dir)) {
             mkdir($dir, 0755, true);
             aplicar_permisos_iis($dir);
         }
@@ -118,16 +129,17 @@ class Controller
         $filename = $subdir . '_' . date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.' . $extension;
         $destino = $dir . '/' . $filename;
 
-        if (!move_uploaded_file($file['tmp_name'], $destino)) {
+        if (!move_uploaded_file($tmpName, $destino)) {
             $this->flash('error', 'No se pudo guardar el archivo en el servidor.');
             return $oldFile;
         }
 
-        // Corrige permisos de lectura en IIS/Windows para que el archivo
-        // recién subido se pueda ver de inmediato (ver core/helpers.php).
         aplicar_permisos_iis($destino);
 
-        // Elimina el archivo anterior, si existía, para no acumular basura.
+        // Comprime el archivo si supera 1 MB
+        Compressor::compress($destino, $mime);
+        aplicar_permisos_iis($destino);
+
         if ($oldFile) {
             $oldPath = $dir . '/' . $oldFile;
             if (is_file($oldPath)) {
@@ -136,5 +148,104 @@ class Controller
         }
 
         return $filename;
+    }
+
+    /**
+     * Procesa la subida de MÚLTIPLES archivos desde un campo <input type="file" multiple>.
+     * Valida cada archivo, comprime si es necesario y retorna array de registros estructurados.
+     *
+     * @param string $field   Nombre del input file (ej. 'documentos' o 'documentos[]')
+     * @param string $subdir  Subcarpeta dentro de public/uploads/ (ej. 'gestiones')
+     * @return array Array de arrays con ['nombre_archivo', 'nombre_original', 'mime_type', 'tamano_bytes']
+     */
+    protected function handleMultipleUploads(string $field, string $subdir): array
+    {
+        $uploadedFiles = [];
+        $fieldKey = rtrim($field, '[]');
+
+        $raw = $_FILES[$fieldKey] ?? $_FILES[$field] ?? null;
+        if (!$raw || empty($raw['name'])) {
+            return $uploadedFiles;
+        }
+
+        // Normaliza estructura para soportar tanto un solo archivo como array de múltiples
+        $names    = is_array($raw['name']) ? $raw['name'] : [$raw['name']];
+        $errors   = is_array($raw['error']) ? $raw['error'] : [$raw['error']];
+        $sizes    = is_array($raw['size']) ? $raw['size'] : [$raw['size']];
+        $tmpNames = is_array($raw['tmp_name']) ? $raw['tmp_name'] : [$raw['tmp_name']];
+
+        $dir = __DIR__ . '/../public/uploads/' . $subdir;
+        if (!is_dir($dir)) {
+            mkdir($dir, 0755, true);
+            aplicar_permisos_iis($dir);
+        }
+
+        $extensionesPermitidas = [
+            'application/pdf' => 'pdf',
+            'image/jpeg'      => 'jpg',
+            'image/png'       => 'png',
+            'image/gif'       => 'gif',
+            'image/webp'      => 'webp',
+        ];
+
+        foreach ($names as $i => $originalName) {
+            $error = $errors[$i] ?? UPLOAD_ERR_NO_FILE;
+            $size = $sizes[$i] ?? 0;
+            $tmpFile = $tmpNames[$i] ?? '';
+
+            if ($error === UPLOAD_ERR_NO_FILE || empty($originalName) || empty($tmpFile)) {
+                continue;
+            }
+
+            if ($error !== UPLOAD_ERR_OK) {
+                $this->flash('warning', "Error al subir el archivo '" . htmlspecialchars($originalName) . "'.");
+                continue;
+            }
+
+            if ($size > 5 * 1024 * 1024) {
+                $mb = round($size / (1024 * 1024), 2);
+                $this->flash('warning', "El archivo '" . htmlspecialchars($originalName) . "' supera 5 MB ({$mb} MB) y fue ignorado.");
+                continue;
+            }
+
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            $mime = finfo_file($finfo, $tmpFile);
+            finfo_close($finfo);
+
+            if (!isset($extensionesPermitidas[$mime])) {
+                $this->flash('warning', "El archivo '" . htmlspecialchars($originalName) . "' tiene formato no permitido. Solo se permiten PDF e imágenes.");
+                continue;
+            }
+
+            $extension = $extensionesPermitidas[$mime];
+            $filename = $subdir . '_' . date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.' . $extension;
+            $destino = $dir . '/' . $filename;
+
+            $moved = is_uploaded_file($tmpFile)
+                ? @move_uploaded_file($tmpFile, $destino)
+                : (@rename($tmpFile, $destino) || @copy($tmpFile, $destino));
+
+            if (!$moved) {
+                $this->flash('warning', "No se pudo guardar el archivo '" . htmlspecialchars($originalName) . "'.");
+                continue;
+            }
+
+            aplicar_permisos_iis($destino);
+
+            // Comprime si aplica
+            Compressor::compress($destino, $mime);
+            aplicar_permisos_iis($destino);
+
+            $finalSize = is_file($destino) ? filesize($destino) : $size;
+
+            $uploadedFiles[] = [
+                'nombre_archivo'  => $filename,
+                'nombre_original' => $originalName,
+                'mime_type'       => $mime,
+                'tamano_bytes'    => $finalSize,
+            ];
+        }
+
+        return $uploadedFiles;
     }
 }

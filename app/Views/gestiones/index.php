@@ -118,10 +118,8 @@
                                            data-proveedor="<?= e($g['proveedor_nombre'] ?? '—') ?>"
                                            data-cotizacion="<?= !empty($g['n_cotizacion']) ? e($g['n_cotizacion']) : 'Mensualidad' ?>"
                                            data-valor="<?= e(fmt_money($g['valor_total'])) ?>"
-                                           data-fecha-aprobacion="<?= e(fmt_date($g['fecha_aprobacion_trabajo'] ?? null)) ?>"
                                            data-comentario="<?= e($g['comentario'] ?? '—') ?>"
-                                           data-trabajo="Sin trabajos registrados"
-                                           data-proforma="—">
+                                           data-trabajo="Sin trabajos registrados">
                                 </td>
                                 <td class="ps-3 py-2">
                                     <span class="text-primary fw-semibold">#<?= (int) $g['id'] ?></span>
@@ -175,10 +173,6 @@
                         <?php else: ?>
                             <?php
                                 $descripcionesImpresion = implode('<br>', array_map(fn($t) => e($t['descripcion']), $trabajos));
-                                $proformasImpresion = implode('<br>', array_map(function ($t) {
-                                    if (empty($t['proforma_id'])) return 'Sin asignar';
-                                    return e($t['n_proforma'] ?: ('#' . $t['proforma_id']));
-                                }, $trabajos));
                             ?>
                             <?php foreach ($trabajos as $index => $t): ?>
                                 <tr class="<?= $bgClase ?>">
@@ -189,10 +183,8 @@
                                                    data-proveedor="<?= e($g['proveedor_nombre'] ?? '—') ?>"
                                                    data-cotizacion="<?= !empty($g['n_cotizacion']) ? e($g['n_cotizacion']) : 'Mensualidad' ?>"
                                                    data-valor="<?= e(fmt_money($g['valor_total'])) ?>"
-                                                   data-fecha-aprobacion="<?= e(fmt_date($g['fecha_aprobacion_trabajo'] ?? null)) ?>"
                                                    data-comentario="<?= e($g['comentario'] ?? '—') ?>"
-                                                   data-trabajo="<?= $descripcionesImpresion ?>"
-                                                   data-proforma="<?= $proformasImpresion ?>">
+                                                   data-trabajo="<?= $descripcionesImpresion ?>">
                                         </td>
                                         <td rowspan="<?= $rowspan ?>" class="ps-3 py-2 align-middle">
                                             <div class="text-primary fw-semibold">#<?= (int) $g['id'] ?></div>
@@ -461,8 +453,6 @@
 </style>
 
 <!-- ============================================================ -->
-
-<!-- ============================================================ -->
 <!-- ÁREA DE IMPRESIÓN: formato oficial "Constancia de Entrega y  -->
 <!-- Recepción de Documentación" de Azucarera Choluteca. Se llena -->
 <!-- por JS, paginando de a 10 filas por hoja (con encabezado y   -->
@@ -570,10 +560,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 '<tr>' +
                 '<td>' + chk.dataset.proveedor + '</td>' +
                 '<td>' + chk.dataset.cotizacion + '</td>' +
-                '<td>' + chk.dataset.fechaAprobacion + '</td>' +
                 '<td>' + chk.dataset.valor + '</td>' +
                 '<td>' + chk.dataset.trabajo + '</td>' +
-                '<td>' + chk.dataset.proforma + '</td>' +
                 '<td>' + chk.dataset.comentario + '</td>' +
                 '</tr>';
         });
@@ -590,8 +578,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 '</div>' +
                 '<div class="const-detalle-label">Detalle:</div>' +
                 '<table class="const-tabla">' +
-                    '<colgroup><col style="width:11%"><col style="width:11%"><col style="width:11%"><col style="width:9%"><col style="width:24%"><col style="width:11%"><col style="width:23%"></colgroup>' +
-                    '<thead><tr><th>Proveedor</th><th>Cotización</th><th>Fecha aprob.</th><th>Valor</th><th>Trabajo</th><th>N° Proforma</th><th>Comentarios</th></tr></thead>' +
+                    '<colgroup><col style="width:15%"><col style="width:15%"><col style="width:12%"><col style="width:33%"><col style="width:25%"></colgroup>' +
+                    '<thead><tr><th>Proveedor</th><th>Cotización</th><th>Valor</th><th>Trabajo</th><th>Comentarios</th></tr></thead>' +
                     '<tbody>' + filasHtml + '</tbody>' +
                 '</table>' +
                 (totalPaginas > 1 ? '<div class="const-pagina-num">Página ' + paginaActual + ' de ' + totalPaginas + '</div>' : '') +
@@ -604,12 +592,12 @@ document.addEventListener('DOMContentLoaded', function () {
                     '</div>' +
                     '<div class="const-firma-bloque">' +
                         '<div class="rotulo">RECIBIDO POR</div>' +
-                        '<div>Departamento de ________________________________.</div>' +
+                        '<div> </div>' +
                         '<div class="const-firma-linea">Firma: ________________________</div>' +
                     '</div>' +
                     '<div class="const-cc">' +
                         '<div>CC.<br>Archivo.</div>' +
-                        '<div>Fecha: ________________.</div>' +
+                        
                     '</div>' +
                 '</div>' +
             '</div>';

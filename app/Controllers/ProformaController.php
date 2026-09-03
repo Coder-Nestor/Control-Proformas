@@ -12,6 +12,7 @@ use App\Models\OrdenCompra;
 use App\Models\Factura;
 use App\Models\EntregaFactura;
 use App\Models\Area;
+use App\Models\Documento;
 
 class ProformaController extends Controller
 {
@@ -98,10 +99,10 @@ class ProformaController extends Controller
             return;
         }
 
-        $data['documento_pdf'] = $this->handleUpload('documento_pdf', 'proformas');
         $data['creado_por'] = Auth::id();
 
         $id = Proforma::insert($data);
+        $this->guardarDocumentos($this->handleMultipleUploads('documentos', 'proformas'), 'proforma', $id, 'proformas');
 
         $proformaCreada = Proforma::findConDetalle($id);
         $descripcionCrear = $proformaCreada
@@ -124,7 +125,7 @@ class ProformaController extends Controller
             $this->view('errors/404_inline', []);
             return;
         }
-        $this->view('proformas/show', ['proforma' => $proforma, 'trabajos' => Trabajo::deProforma($id), 'oc' => OrdenCompra::findPorProforma($id), 'historial' => Proforma::historialDe($id)]);
+        $this->view('proformas/show', ['proforma' => $proforma, 'documentos' => Documento::deEntidad('proforma', $id), 'trabajos' => Trabajo::deProforma($id), 'oc' => OrdenCompra::findPorProforma($id), 'historial' => Proforma::historialDe($id)]);
     }
 
     public function edit(array $params): void
@@ -159,6 +160,7 @@ class ProformaController extends Controller
 
         $this->view('proformas/form', [
             'proforma' => $proforma,
+            'documentos' => Documento::deEntidad('proforma', $id),
             'proveedores' => $proveedoresDisponibles,
             'areas' => Area::activas(),
             'cotizaciones' => Gestion::cotizacionesDisponibles($id),
@@ -180,6 +182,7 @@ class ProformaController extends Controller
             $this->flash('error', 'El proveedor de esta gestión no está habilitado para pasar a Proforma. Solo los proveedores seleccionados pueden continuar el proceso.');
             $this->view('proformas/form', [
                 'proforma' => array_merge($actual ?? [], $data, ['id' => $id]),
+                'documentos' => Documento::deEntidad('proforma', $id),
                 'proveedores' => Proveedor::habilitadosParaProforma(),
                 'areas' => Area::activas(),
                 'cotizaciones' => Gestion::cotizacionesDisponibles($id),
@@ -187,17 +190,19 @@ class ProformaController extends Controller
             return;
         }
 
-        $eliminarPdf = $this->input('eliminar_pdf', '0') === '1';
-        if ($eliminarPdf && empty($_FILES['documento_pdf']['name'])) {
-            if (!empty($actual['documento_pdf'])) {
-                @unlink(__DIR__ . '/../../public/uploads/proformas/' . $actual['documento_pdf']);
+        // Procesar eliminación de documentos marcados — primero se borra el
+        // archivo físico de /uploads (necesita el registro ANTES de marcarlo
+        // eliminado, para saber su nombre_archivo), y luego se hace el
+        // borrado lógico en la base de datos.
+        $eliminarDocs = $_POST['eliminar_documentos'] ?? [];
+        if (is_array($eliminarDocs)) {
+            foreach ($eliminarDocs as $docId) {
+                $this->eliminarDocumentoIndividual((int) $docId, 'proformas');
             }
-            $data['documento_pdf'] = null;
-        } else {
-            $data['documento_pdf'] = $this->handleUpload('documento_pdf', 'proformas', $actual['documento_pdf'] ?? null);
         }
 
         Proforma::update($id, $data);
+        $this->guardarDocumentos($this->handleMultipleUploads('documentos', 'proformas'), 'proforma', $id, 'proformas');
 
         $proformaActualizada = Proforma::findConDetalle($id);
         $descripcionActualizar = $proformaActualizada
@@ -217,10 +222,6 @@ class ProformaController extends Controller
         $id = (int) $params['id'];
 
         $proforma = Proforma::findConDetalle($id);
-        if ($proforma && !empty($proforma['documento_pdf'])) {
-            @unlink(__DIR__ . '/../../public/uploads/proformas/' . $proforma['documento_pdf']);
-        }
-
         // Cascada manual: OC -> Factura -> Entrega
         $oc = OrdenCompra::findPorProforma($id);
         if ($oc) {
@@ -244,6 +245,7 @@ class ProformaController extends Controller
 
         Trabajo::desasignarPorProforma($id);
         Proforma::registrarHistorial($id, Auth::id(), $descripcion);
+        $this->eliminarDocumentosDeEntidad('proforma', $id, 'proformas');
         Proforma::softDelete($id, Auth::id());
 
         $this->flash('success', 'Proforma eliminada. Los trabajos asociados quedaron sin asignar.');
@@ -302,6 +304,67 @@ class ProformaController extends Controller
                 'trabajo'          => $descripcion,
                 'valor_cotizacion' => $valor,
             ]);
+        }
+    }
+
+    /**
+     * Borra físicamente de /uploads UN documento puntual (por su ID) y luego
+     * lo marca como eliminado en la base de datos. El orden importa: hay que
+     * buscar el registro ANTES de marcarlo eliminado, porque find() solo
+     * encuentra registros activos — si se invirtiera el orden, ya no se
+     * podría recuperar el nombre_archivo para borrar el archivo del disco.
+     */
+    private function eliminarDocumentoIndividual(int $docId, string $subdir): void
+    {
+        $doc = Documento::find($docId);
+        if ($doc) {
+            $ruta = __DIR__ . '/../../public/uploads/' . $subdir . '/' . $doc['nombre_archivo'];
+            if (is_file($ruta)) {
+                @unlink($ruta);
+            }
+        }
+        Documento::softDelete($docId, Auth::id());
+    }
+
+    /**
+     * Borra físicamente de /uploads TODOS los documentos activos de una
+     * entidad (ej. al eliminar la proforma completa), y luego los marca como
+     * eliminados en la base de datos — mismo orden que arriba, por la misma
+     * razón: hay que leerlos mientras siguen activos.
+     */
+    private function eliminarDocumentosDeEntidad(string $tipoEntidad, int $idEntidad, string $subdir): void
+    {
+        $documentos = Documento::deEntidad($tipoEntidad, $idEntidad);
+        foreach ($documentos as $doc) {
+            $ruta = __DIR__ . '/../../public/uploads/' . $subdir . '/' . $doc['nombre_archivo'];
+            if (is_file($ruta)) {
+                @unlink($ruta);
+            }
+        }
+        Documento::eliminarDeEntidad($tipoEntidad, $idEntidad, Auth::id());
+    }
+
+    private function guardarDocumentos(array $archivos, string $tipoEntidad, int $idEntidad, string $subdir): void
+    {
+        foreach ($archivos as $archivo) {
+            if (is_array($archivo)) {
+                Documento::crearDelArchivo(
+                    $tipoEntidad,
+                    $idEntidad,
+                    $archivo['nombre_archivo'],
+                    $archivo['mime_type'],
+                    (int) $archivo['tamano_bytes'],
+                    Auth::id(),
+                    $archivo['nombre_original'] ?? $archivo['nombre_archivo']
+                );
+            } else {
+                $ruta = __DIR__ . '/../../public/uploads/' . $subdir . '/' . $archivo;
+                $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                $mime = is_file($ruta) ? finfo_file($finfo, $ruta) : 'application/pdf';
+                finfo_close($finfo);
+                $size = is_file($ruta) ? filesize($ruta) : 0;
+                Documento::crearDelArchivo($tipoEntidad, $idEntidad, $archivo, $mime, $size, Auth::id());
+            }
         }
     }
 

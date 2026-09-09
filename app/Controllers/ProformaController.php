@@ -28,9 +28,13 @@ class ProformaController extends Controller
         if ($paginaActual > $totalPaginas) $paginaActual = $totalPaginas;
         $offset = ($paginaActual - 1) * $porPagina;
         $proformas = Proforma::allConDetalle($filtros, $porPagina, $offset);
+        $documentosPorProforma = Documento::deEntidades('proforma', array_column($proformas, 'id'));
 
         $this->view('proformas/index', [
-            'proformas' => $proformas, 'proveedores' => Proveedor::activos(), 'filtros' => $filtros,
+            'proformas' => $proformas,
+            'documentosPorProforma' => $documentosPorProforma,
+            'proveedores' => Proveedor::activos(),
+            'filtros' => $filtros,
             'paginacion' => ['pagina_actual' => $paginaActual, 'total_paginas' => $totalPaginas, 'total_registros' => $totalRegistros, 'por_pagina' => $porPagina],
         ]);
     }

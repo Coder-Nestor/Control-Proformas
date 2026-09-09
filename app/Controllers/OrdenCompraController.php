@@ -15,7 +15,14 @@ class OrdenCompraController extends Controller
     public function index(): void
     {
         $filtros = ['estado' => $this->input('estado', ''), 'buscar' => $this->input('buscar', '')];
-        $this->view('ordenes/index', ['ordenes' => OrdenCompra::allConDetalle($filtros), 'estados' => OrdenCompra::ESTADOS, 'filtros' => $filtros]);
+        $ordenes = OrdenCompra::allConDetalle($filtros);
+        $documentosPorOrden = Documento::deEntidades('orden_compra', array_column($ordenes, 'id'));
+        $this->view('ordenes/index', [
+            'ordenes' => $ordenes,
+            'documentosPorOrden' => $documentosPorOrden,
+            'estados' => OrdenCompra::ESTADOS,
+            'filtros' => $filtros
+        ]);
     }
 
     public function create(): void

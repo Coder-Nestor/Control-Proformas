@@ -143,8 +143,18 @@
                             </td>
                             <td class="text-end pe-3 py-2">
                                 <div class="d-flex justify-content-end gap-1">
-                                    <?php if (!empty($p['documento_pdf'])): ?>
-                                        <a href="<?= base_url('uploads/proformas/' . $p['documento_pdf']) ?>" target="_blank" class="btn btn-outline-danger btn-sm rounded-pill" title="Ver PDF"><i class="bi bi-file-earmark-pdf"></i></a>
+                                    <?php 
+                                        $docsProforma = $documentosPorProforma[$p['id']] ?? []; 
+                                        $primerDoc = !empty($docsProforma) ? $docsProforma[0]['nombre_archivo'] : (!empty($p['documento_pdf']) ? $p['documento_pdf'] : null);
+                                        $totalDocs = count($docsProforma) ?: (!empty($p['documento_pdf']) ? 1 : 0);
+                                    ?>
+                                    <?php if ($primerDoc): ?>
+                                        <a href="<?= base_url('uploads/proformas/' . $primerDoc) ?>"
+                                           target="_blank"
+                                           class="btn btn-outline-danger btn-sm rounded-pill"
+                                           title="<?= $totalDocs > 1 ? 'Ver documentos (' . $totalDocs . ')' : 'Ver documento' ?>">
+                                            <i class="bi bi-file-earmark-pdf"></i>
+                                        </a>
                                     <?php endif; ?>
                                     <?php if (Auth::can('proformas.editar')): ?>
                                         <a href="<?= base_url('/proformas/' . $p['id'] . '/editar') ?>" class="btn btn-outline-primary btn-sm rounded-pill" title="Editar"><i class="bi bi-pencil"></i></a>
@@ -463,12 +473,12 @@ document.addEventListener('DOMContentLoaded', function () {
                     '</div>' +
                     '<div class="const-firma-bloque">' +
                         '<div class="rotulo">RECIBIDO POR</div>' +
-                        '<div>Departamento de ________________________________.</div>' +
+                     
                         '<div class="const-firma-linea">Firma: ________________________</div>' +
                     '</div>' +
                     '<div class="const-cc">' +
                         '<div>CC.<br>Archivo.</div>' +
-                        '<div>Fecha: ________________.</div>' +
+                     
                     '</div>' +
                 '</div>' +
             '</div>';

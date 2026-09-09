@@ -13,7 +13,13 @@ class EntregaFacturaController extends Controller
     public function index(): void
     {
         $filtros = ['buscar' => $this->input('buscar', '')];
-        $this->view('entregas/index', ['entregas' => EntregaFactura::allConDetalle($filtros), 'filtros' => $filtros]);
+        $entregas = EntregaFactura::allConDetalle($filtros);
+        $documentosPorEntrega = Documento::deEntidades('entrega_factura', array_column($entregas, 'id'));
+        $this->view('entregas/index', [
+            'entregas' => $entregas,
+            'documentosPorEntrega' => $documentosPorEntrega,
+            'filtros' => $filtros
+        ]);
     }
 
     public function create(): void

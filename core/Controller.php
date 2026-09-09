@@ -158,7 +158,7 @@ class Controller
      * @param string $subdir  Subcarpeta dentro de public/uploads/ (ej. 'gestiones')
      * @return array Array de arrays con ['nombre_archivo', 'nombre_original', 'mime_type', 'tamano_bytes']
      */
-    protected function handleMultipleUploads(string $field, string $subdir): array
+    protected function handleMultipleUploads(string $field, string $subdir, int $maxArchivos = 2): array
     {
         $uploadedFiles = [];
         $fieldKey = rtrim($field, '[]');
@@ -173,6 +173,15 @@ class Controller
         $errors   = is_array($raw['error']) ? $raw['error'] : [$raw['error']];
         $sizes    = is_array($raw['size']) ? $raw['size'] : [$raw['size']];
         $tmpNames = is_array($raw['tmp_name']) ? $raw['tmp_name'] : [$raw['tmp_name']];
+
+        // Limita a un máximo de $maxArchivos (por defecto 2)
+        if (count($names) > $maxArchivos) {
+            $this->flash('warning', "Solo se permite subir un máximo de {$maxArchivos} documentos. Los archivos adicionales fueron ignorados.");
+            $names    = array_slice($names, 0, $maxArchivos);
+            $errors   = array_slice($errors, 0, $maxArchivos);
+            $sizes    = array_slice($sizes, 0, $maxArchivos);
+            $tmpNames = array_slice($tmpNames, 0, $maxArchivos);
+        }
 
         $dir = __DIR__ . '/../public/uploads/' . $subdir;
         if (!is_dir($dir)) {

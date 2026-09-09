@@ -4,6 +4,11 @@ $isEdit = !empty($g['id']);
 $trabajos = $trabajos ?? [];
 $areas = $areas ?? [];
 $val = fn($campo) => e($g[$campo] ?? '');
+
+$cotizRaw = trim((string)($g['n_cotizacion'] ?? ''));
+$cotizUpper = mb_strtoupper($cotizRaw);
+$esGestionInterna = $isEdit && ($cotizUpper === 'GESTIÓN INTERNA' || $cotizUpper === 'GESTION INTERNA');
+$esMensualidad = $isEdit && $cotizUpper === 'MENSUALIDAD';
 ?>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -25,14 +30,14 @@ $val = fn($campo) => e($g[$campo] ?? '');
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-header bg-white border-bottom-0 pt-3 pb-0">
             <h6 class="fw-bold text-secondary">
-                <i class="bi bi-building me-2 text-primary"></i>Datos generales de la cotización
+                <i class="bi bi-building me-2 text-primary"></i>Datos generales
             </h6>
         </div>
         <div class="card-body">
             <div class="row g-3">
                 <div class="col-12 mb-1">
                     <label class="form-label fw-semibold d-block">Tipo de gestión</label>
-                    <div class="btn-group" role="group" aria-label="Tipo de gestión">
+                    <div class="btn-group flex-wrap" role="group" aria-label="Tipo de gestión">
                         <input type="radio" class="btn-check" name="tipo_gestion" id="tipoCotizacion" value="cotizacion" autocomplete="off">
                         <label class="btn btn-outline-primary btn-sm" for="tipoCotizacion">
                             <i class="bi bi-receipt me-1"></i>Cotización
@@ -42,12 +47,17 @@ $val = fn($campo) => e($g[$campo] ?? '');
                         <label class="btn btn-outline-primary btn-sm" for="tipoMensualidad">
                             <i class="bi bi-calendar3 me-1"></i>Mensualidad (sin cotización)
                         </label>
+
+                        <input type="radio" class="btn-check" name="tipo_gestion" id="tipoInterna" value="interna" autocomplete="off">
+                        <label class="btn btn-outline-primary btn-sm" for="tipoInterna">
+                            <i class="bi bi-shield-check me-1"></i>Gestión Interna
+                        </label>
                     </div>
                     <small class="text-muted d-block mt-1" id="tipoGestionAyuda">
                        Registra una gestión con número de cotización.
                     </small>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-6" id="campoProveedor">
                     <label class="form-label fw-semibold">Proveedor <span class="text-danger">*</span></label>
                     <select name="proveedor_id" class="form-select" required>
                         <option value="">Selecciona un proveedor...</option>
@@ -63,11 +73,11 @@ $val = fn($campo) => e($g[$campo] ?? '');
                         <input type="text" name="n_cotizacion" id="inputNCotizacion" value="<?= $val('n_cotizacion') ?>" class="form-control" placeholder="Ej. S06603">
                     </div>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-6" id="campoSolicitadoPor">
                     <label class="form-label fw-semibold">Solicitado por</label>
                     <div class="input-group">
                         <span class="input-group-text bg-light"><i class="bi bi-person"></i></span>
-                        <select name="solicitado_por" class="form-select">
+                        <select name="solicitado_por" id="selectSolicitadoPor" class="form-select">
                             <option value="">Selecciona un área solicitante...</option>
                             <?php foreach ($areas as $a): ?>
                                 <option value="<?= e($a['nombre']) ?>" <?= ($g['solicitado_por'] ?? '') === $a['nombre'] ? 'selected' : '' ?>><?= e($a['nombre']) ?></option>
@@ -94,7 +104,7 @@ $val = fn($campo) => e($g[$campo] ?? '');
         <div class="card-header bg-white border-bottom-0 pt-3 pb-0">
             <div class="d-flex justify-content-between align-items-center">
                 <h6 class="fw-bold text-secondary mb-0">
-                    <i class="bi bi-list-task me-2 text-primary"></i>Trabajos de esta cotización
+                    <i class="bi bi-list-task me-2 text-primary"></i>Detalle de trabajos
                 </h6>
                 <button type="button" class="btn btn-primary btn-sm rounded-pill px-3" id="btnAgregarTrabajo">
                     <i class="bi bi-plus-lg"></i> Agregar trabajo
@@ -106,7 +116,7 @@ $val = fn($campo) => e($g[$campo] ?? '');
 
             <div class="d-flex justify-content-between align-items-center border-top pt-3 mt-2">
                 <small class="text-muted">
-                    <i class="bi bi-info-circle me-1"></i>Cada trabajo puede asignarse a una proforma distinta
+                    <i class="bi bi-info-circle me-1"></i>Registra los trabajos o servicios correspondientes
                 </small>
                 <div class="bg-primary bg-opacity-10 px-4 py-2 rounded">
                     <strong>Total: <span class="text-primary" id="totalTrabajos">L. 0.00</span></strong>
@@ -116,7 +126,7 @@ $val = fn($campo) => e($g[$campo] ?? '');
     </div>
 
     <!-- Sección: Fechas -->
-    <div class="card border-0 shadow-sm mb-4">
+    <div class="card border-0 shadow-sm mb-4" id="seccionFechas">
         <div class="card-header bg-white border-bottom-0 pt-3 pb-0">
             <h6 class="fw-bold text-secondary">
                 <i class="bi bi-calendar-event me-2 text-primary"></i>Fechas clave
@@ -126,15 +136,15 @@ $val = fn($campo) => e($g[$campo] ?? '');
             <div class="row g-3">
                 <div class="col-md-4">
                     <label class="form-label fw-semibold">Aprobación por ACHSA</label>
-                    <input type="date" name="fecha_aprobacion_trabajo" value="<?= $val('fecha_aprobacion_trabajo') ?>" class="form-control">
+                    <input type="date" name="fecha_aprobacion_trabajo" id="inputFechaAprobacion" value="<?= $val('fecha_aprobacion_trabajo') ?>" class="form-control">
                 </div>
                 <div class="col-md-4">
                     <label class="form-label fw-semibold">Finalización por HELIOS</label>
-                    <input type="date" name="fecha_finalizacion_trabajo" value="<?= $val('fecha_finalizacion_trabajo') ?>" class="form-control">
+                    <input type="date" name="fecha_finalizacion_trabajo" id="inputFechaFinalizacion" value="<?= $val('fecha_finalizacion_trabajo') ?>" class="form-control">
                 </div>
                 <div class="col-md-4">
                     <label class="form-label fw-semibold">Revisión para facturar</label>
-                    <input type="date" name="fecha_revision_cotizacion" value="<?= $val('fecha_revision_cotizacion') ?>" class="form-control">
+                    <input type="date" name="fecha_revision_cotizacion" id="inputFechaRevision" value="<?= $val('fecha_revision_cotizacion') ?>" class="form-control">
                     <small class="text-muted">Deja en blanco si aún no se revisa</small>
                 </div>
             </div>
@@ -142,7 +152,7 @@ $val = fn($campo) => e($g[$campo] ?? '');
     </div>
 
     <!-- Sección: Documentos -->
-    <div class="card border-0 shadow-sm mb-4">
+    <div class="card border-0 shadow-sm mb-4" id="seccionDocumentos">
         <div class="card-header bg-white border-bottom-0 pt-3 pb-0">
             <h6 class="fw-bold text-secondary">
                 <i class="bi bi-paperclip me-2 text-primary"></i>Documentos adjuntos
@@ -185,8 +195,8 @@ $val = fn($campo) => e($g[$campo] ?? '');
                 <div class="mb-2" id="dropzoneIconWrap">
                     <i class="bi bi-cloud-arrow-up text-primary" id="dropzoneIcon" style="font-size: 2.2rem;"></i>
                 </div>
-                <p class="mb-1 fw-semibold text-dark" id="dropzoneTexto">Arrastra tus archivos aquí o haz clic para seleccionar</p>
-                <small class="text-muted d-block mb-2">Puedes seleccionar múltiples archivos PDF o imágenes (JPG, PNG, GIF, WEBP). Límite de 5 MB por archivo.</small>
+                <p class="mb-1 fw-semibold text-dark" id="dropzoneTexto">Arrastra tus archivos aquí o haz clic para seleccionar (máximo 2)</p>
+                <small class="text-muted d-block mb-2">Puedes seleccionar un máximo de 2 archivos (PDF o imágenes JPG, PNG, GIF, WEBP). Límite de 5 MB por archivo.</small>
                 <input type="file" name="documentos[]" accept="application/pdf,image/jpeg,image/png,image/gif,image/webp" class="form-control" id="pdfInput" multiple>
             </div>
             <div id="filePreviewList" class="mt-2 d-none"></div>
@@ -215,16 +225,6 @@ $val = fn($campo) => e($g[$campo] ?? '');
         </a>
     </div>
 </form>
-
-<!-- Plantilla de opciones de proforma -->
-<template id="proformaOptionsTemplate">
-    <option value="">— Sin asignar —</option>
-    <?php foreach ($proformas as $p): ?>
-        <option value="<?= (int) $p['id'] ?>">
-            <?= e($p['n_proforma'] ?: ('Proforma #' . $p['id'])) ?><?= $p['fecha_solicitud'] ? ' (' . fmt_date($p['fecha_solicitud']) . ')' : '' ?>
-        </option>
-    <?php endforeach; ?>
-</template>
 
 <style>
     /* Estilos personalizados para mejorar la apariencia */
@@ -308,56 +308,99 @@ document.addEventListener('DOMContentLoaded', function () {
         return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
-    // --- Tipo de gestión: Cotización real vs Mensualidad (sin cotización) ---
+    // --- Tipo de gestión: Cotización vs Mensualidad vs Gestión Interna ---
     const radioCotizacion = document.getElementById('tipoCotizacion');
     const radioMensualidad = document.getElementById('tipoMensualidad');
+    const radioInterna = document.getElementById('tipoInterna');
+    
     const campoNCotizacion = document.getElementById('campoNCotizacion');
     const inputNCotizacion = document.getElementById('inputNCotizacion');
+    const campoSolicitadoPor = document.getElementById('campoSolicitadoPor');
+    const selectSolicitadoPor = document.getElementById('selectSolicitadoPor');
     const campoAprobadoPor = document.getElementById('campoAprobadoPor');
     const inputAprobadoPor = document.getElementById('inputAprobadoPor');
+    const seccionFechas = document.getElementById('seccionFechas');
     const tipoGestionAyuda = document.getElementById('tipoGestionAyuda');
 
-    let valorNCotizacionGuardado = inputNCotizacion.value;
+    let valorNCotizacionGuardado = (inputNCotizacion.value !== 'Gestión Interna' && inputNCotizacion.value !== 'Gestion Interna') ? inputNCotizacion.value : '';
+    let valorSolicitadoPorGuardado = selectSolicitadoPor ? selectSolicitadoPor.value : '';
     let valorAprobadoPorGuardado = inputAprobadoPor.value;
 
-    function aplicarTipoGestion(esMensualidad) {
-        if (esMensualidad) {
+    function aplicarTipoGestion(tipo) {
+        if (tipo === 'interna') {
             campoNCotizacion.classList.add('d-none');
-            if (inputNCotizacion.value) valorNCotizacionGuardado = inputNCotizacion.value;
-            inputNCotizacion.value = '';
+            if (inputNCotizacion.value && inputNCotizacion.value !== 'Gestión Interna') valorNCotizacionGuardado = inputNCotizacion.value;
+            inputNCotizacion.value = 'Gestión Interna';
+
+            campoSolicitadoPor.classList.remove('d-none');
+            if (selectSolicitadoPor && !selectSolicitadoPor.value) {
+                selectSolicitadoPor.value = valorSolicitadoPorGuardado;
+            }
+
             campoAprobadoPor.classList.add('d-none');
             if (inputAprobadoPor.value) valorAprobadoPorGuardado = inputAprobadoPor.value;
             inputAprobadoPor.value = '';
-            tipoGestionAyuda.innerHTML = '<i class="bi bi-info-circle me-1"></i>Esta gestión quedará registrada como <strong>Mensualidad</strong>, sin número de cotización. Podrás asociarla a una proforma más adelante, igual que cualquier otro trabajo.';
-        } else {
+
+            seccionFechas.classList.add('d-none');
+            tipoGestionAyuda.innerHTML = '<i class="bi bi-info-circle me-1"></i>Esta gestión quedará registrada como <strong>Gestión Interna</strong>. Se llenarán proveedor, área solicitante, trabajo, valor, documentos y comentarios.';
+        } else if (tipo === 'mensualidad') {
+            campoNCotizacion.classList.add('d-none');
+            if (inputNCotizacion.value && inputNCotizacion.value !== 'Gestión Interna') valorNCotizacionGuardado = inputNCotizacion.value;
+            inputNCotizacion.value = '';
+
+            campoSolicitadoPor.classList.remove('d-none');
+            if (selectSolicitadoPor && !selectSolicitadoPor.value) {
+                selectSolicitadoPor.value = valorSolicitadoPorGuardado;
+            }
+
+            campoAprobadoPor.classList.add('d-none');
+            if (inputAprobadoPor.value) valorAprobadoPorGuardado = inputAprobadoPor.value;
+            inputAprobadoPor.value = '';
+
+            seccionFechas.classList.remove('d-none');
+            tipoGestionAyuda.innerHTML = '<i class="bi bi-info-circle me-1"></i>Esta gestión quedará registrada como <strong>Mensualidad</strong>, sin número de cotización.';
+        } else { // 'cotizacion'
             campoNCotizacion.classList.remove('d-none');
-            campoAprobadoPor.classList.remove('d-none');
-            if (!inputNCotizacion.value) {
+            if (!inputNCotizacion.value || inputNCotizacion.value === 'Gestión Interna') {
                 inputNCotizacion.value = valorNCotizacionGuardado;
             }
+
+            campoSolicitadoPor.classList.remove('d-none');
+            if (selectSolicitadoPor && !selectSolicitadoPor.value) {
+                selectSolicitadoPor.value = valorSolicitadoPorGuardado;
+            }
+
+            campoAprobadoPor.classList.remove('d-none');
             if (!inputAprobadoPor.value) {
                 inputAprobadoPor.value = valorAprobadoPorGuardado;
             }
+
+            seccionFechas.classList.remove('d-none');
             tipoGestionAyuda.innerHTML = 'Registra una gestión con número de cotización.';
         }
     }
 
-    radioCotizacion.addEventListener('change', function () { if (this.checked) aplicarTipoGestion(false); });
-    radioMensualidad.addEventListener('change', function () { if (this.checked) aplicarTipoGestion(true); });
+    if (radioCotizacion) radioCotizacion.addEventListener('change', function () { if (this.checked) aplicarTipoGestion('cotizacion'); });
+    if (radioMensualidad) radioMensualidad.addEventListener('change', function () { if (this.checked) aplicarTipoGestion('mensualidad'); });
+    if (radioInterna) radioInterna.addEventListener('change', function () { if (this.checked) aplicarTipoGestion('interna'); });
 
-    const esGestionExistenteSinCotizacion = <?= ($isEdit && empty($g['n_cotizacion'])) ? 'true' : 'false' ?>;
-    if (esGestionExistenteSinCotizacion) {
+    const esGestionInterna = <?= $esGestionInterna ? 'true' : 'false' ?>;
+    const esMensualidad = <?= $esMensualidad ? 'true' : 'false' ?>;
+
+    if (esGestionInterna) {
+        radioInterna.checked = true;
+        aplicarTipoGestion('interna');
+    } else if (esMensualidad) {
         radioMensualidad.checked = true;
-        aplicarTipoGestion(true);
+        aplicarTipoGestion('mensualidad');
     } else {
         radioCotizacion.checked = true;
-        aplicarTipoGestion(false);
+        aplicarTipoGestion('cotizacion');
     }
 
     const container = document.getElementById('trabajosContainer');
     const btnAgregar = document.getElementById('btnAgregarTrabajo');
     const totalSpan = document.getElementById('totalTrabajos');
-    const optionsHtml = document.getElementById('proformaOptionsTemplate').innerHTML;
 
     function actualizarTotal() {
         let total = 0;
@@ -374,18 +417,14 @@ document.addEventListener('DOMContentLoaded', function () {
         row.className = 'row g-2 align-items-end trabajo-row mb-3';
 
         row.innerHTML =
-            '<div class="col-md-5">' +
-            '   <label class="form-label small fw-semibold">Descripción del trabajo</label>' +
-            '   <input type="text" name="trabajo_descripcion[]" class="form-control form-control-sm" placeholder="Ej. Instalación de GPS y FLS">' +
-            '</div>' +
-            '<div class="col-md-2">' +
-            '   <label class="form-label small fw-semibold">Valor (L.)</label>' +
-            '   <input type="number" step="0.01" name="trabajo_valor[]" class="form-control form-control-sm valor-input" placeholder="0.00">' +
+            '<div class="col-md-7">' +
+            '   <label class="form-label small fw-semibold">Descripción del trabajo <span class="text-danger">*</span></label>' +
+            '   <input type="text" name="trabajo_descripcion[]" class="form-control form-control-sm" placeholder="Ej. Reparación de equipo / Servicio técnico" required>' +
+            '   <input type="hidden" name="trabajo_proforma_id[]" value="' + escapeHtml(data.proforma_id || '') + '">' +
             '</div>' +
             '<div class="col-md-4">' +
-            '   <label class="form-label small fw-semibold">Proforma asignada</label>' +
-            '   <select name="trabajo_proforma_id[]" class="form-select form-select-sm">' + optionsHtml + '</select>' +
-            '   <div class="mt-1 crear-proforma-slot"></div>' +
+            '   <label class="form-label small fw-semibold">Valor (L.)</label>' +
+            '   <input type="number" step="0.01" name="trabajo_valor[]" class="form-control form-control-sm valor-input" placeholder="0.00">' +
             '</div>' +
             '<div class="col-md-1 d-flex justify-content-end">' +
             '   <button type="button" class="btn btn-outline-danger btn-sm btn-quitar-trabajo" title="Quitar este trabajo">' +
@@ -395,28 +434,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
         row.querySelector('input[name="trabajo_descripcion[]"]').value = data.descripcion || '';
         row.querySelector('input[name="trabajo_valor[]"]').value = data.valor ?? '';
-        if (data.proforma_id) {
-            row.querySelector('select[name="trabajo_proforma_id[]"]').value = data.proforma_id;
-        }
-
-        const slot = row.querySelector('.crear-proforma-slot');
-        if (data.id) {
-            row.dataset.trabajoId = data.id;
-            const link = document.createElement('a');
-            link.href = '<?= base_url('/proformas/crear') ?>?trabajo_id=' + data.id;
-            link.className = 'small text-primary text-decoration-none';
-            link.innerHTML = '<i class="bi bi-plus-circle me-1"></i>Crear proforma';
-            slot.appendChild(link);
-        } else {
-            const aviso = document.createElement('small');
-            aviso.className = 'text-muted';
-            aviso.textContent = 'Guarda la gestión para poder crear la proforma desde aquí';
-            slot.appendChild(aviso);
-        }
 
         row.querySelector('.btn-quitar-trabajo').addEventListener('click', function () {
-            row.remove();
-            actualizarTotal();
+            if (container.querySelectorAll('.trabajo-row').length > 1) {
+                row.remove();
+                actualizarTotal();
+            } else {
+                row.querySelector('input[name="trabajo_descripcion[]"]').value = '';
+                row.querySelector('input[name="trabajo_valor[]"]').value = '';
+                actualizarTotal();
+            }
         });
 
         row.querySelector('.valor-input').addEventListener('input', actualizarTotal);
@@ -424,9 +451,11 @@ document.addEventListener('DOMContentLoaded', function () {
         return row;
     }
 
-    btnAgregar.addEventListener('click', function () {
-        container.appendChild(crearFila());
-    });
+    if (btnAgregar) {
+        btnAgregar.addEventListener('click', function () {
+            container.appendChild(crearFila());
+        });
+    }
 
     // Cargar trabajos existentes
     const trabajosExistentes = <?= json_encode(array_map(fn($t) => [
@@ -446,56 +475,210 @@ document.addEventListener('DOMContentLoaded', function () {
 
     actualizarTotal();
 
-    // --- Múltiples documentos: vista previa interactiva ---
+    // --- Múltiples documentos con acumulación y eliminación interactiva (Máx 2) ---
+    const MAX_ARCHIVOS = 2;
+    const MAX_MB = 5;
     const pdfInput = document.getElementById('pdfInput');
     const filePreviewList = document.getElementById('filePreviewList');
     const dropzoneTexto = document.getElementById('dropzoneTexto');
     const dropzoneIcon = document.getElementById('dropzoneIcon');
 
-    if (pdfInput) {
-        pdfInput.addEventListener('change', function () {
-            if (filePreviewList) filePreviewList.innerHTML = '';
-            if (pdfInput.files && pdfInput.files.length > 0) {
-                const count = pdfInput.files.length;
-                let hayErrorTamano = false;
-                let itemsHtml = '<div class="alert alert-light border py-2 px-3 mb-2 rounded-3"><div class="fw-semibold small mb-2 text-primary"><i class="bi bi-paperclip me-1"></i>' + count + ' archivo(s) seleccionado(s) para subir:</div><ul class="list-unstyled mb-0 small">';
-                
-                for (let i = 0; i < pdfInput.files.length; i++) {
-                    const file = pdfInput.files[i];
+    const dropzoneContainer = document.getElementById('dropzoneContainer');
+
+    // Documentos que YA están guardados en esta gestión (cuentan para el límite de 2)
+    const totalDocumentosExistentes = <?= json_encode($isEdit && !empty($documentos) ? count($documentos) : 0) ?>;
+    let documentosMarcadosParaEliminar = 0;
+
+    let archivosSeleccionados = [];
+
+    function espaciosDisponibles() {
+        const existentesActivos = totalDocumentosExistentes - documentosMarcadosParaEliminar;
+        return MAX_ARCHIVOS - existentesActivos - archivosSeleccionados.length;
+    }
+
+    function sincronizarInputFiles() {
+        if (!pdfInput) return;
+        try {
+            const dt = new DataTransfer();
+            archivosSeleccionados.forEach(file => dt.items.add(file));
+            pdfInput.files = dt.files;
+        } catch (e) {
+            console.error('Error al sincronizar archivos con DataTransfer:', e);
+        }
+    }
+
+    function renderizarListaArchivos() {
+        const disponibles = espaciosDisponibles();
+
+        if (filePreviewList) {
+            filePreviewList.innerHTML = '';
+
+            if (archivosSeleccionados.length === 0) {
+                filePreviewList.classList.add('d-none');
+            } else {
+                const count = archivosSeleccionados.length;
+                let itemsHtml = '<div class="card border border-primary-subtle shadow-xs mt-3">' +
+                    '<div class="card-header bg-primary bg-opacity-10 py-2 px-3 d-flex justify-content-between align-items-center">' +
+                        '<span class="fw-semibold small text-primary"><i class="bi bi-paperclip me-1"></i>' + count + ' documento(s) nuevo(s) listo(s) para subir</span>' +
+                        '<span class="badge bg-primary rounded-pill">' + count + '/' + MAX_ARCHIVOS + '</span>' +
+                    '</div>' +
+                    '<div class="card-body p-2">' +
+                        '<div class="d-flex flex-column gap-2">';
+
+                archivosSeleccionados.forEach((file, index) => {
                     const mb = (file.size / (1024 * 1024)).toFixed(2);
                     const kb = (file.size / 1024).toFixed(0);
                     const sizeFmt = file.size >= 1048576 ? mb + ' MB' : kb + ' KB';
-                    const isTooLarge = file.size > 5 * 1024 * 1024;
-                    if (isTooLarge) hayErrorTamano = true;
-                    
+                    const isTooLarge = file.size > MAX_MB * 1024 * 1024;
                     const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
                     const icon = isPdf ? 'bi-file-earmark-pdf-fill text-danger' : 'bi-file-earmark-image-fill text-primary';
-                    
-                    itemsHtml += '<li class="d-flex justify-content-between align-items-center py-1 border-bottom border-light">' +
-                        '<span><i class="bi ' + icon + ' me-2"></i> ' + escapeHtml(file.name) + '</span>' +
-                        '<span class="badge ' + (isTooLarge ? 'bg-danger' : 'bg-secondary') + '">' + sizeFmt + (isTooLarge ? ' (Excede 5 MB)' : '') + '</span>' +
-                        '</li>';
-                }
-                itemsHtml += '</ul>';
-                if (hayErrorTamano) {
-                    itemsHtml += '<div class="text-danger small mt-2 fw-semibold"><i class="bi bi-exclamation-triangle-fill me-1"></i>Atención: Uno o más archivos superan el límite de 5 MB y serán ignorados.</div>';
-                }
-                itemsHtml += '</div>';
-                
-                if (filePreviewList) {
-                    filePreviewList.innerHTML = itemsHtml;
-                    filePreviewList.classList.remove('d-none');
-                }
-                if (dropzoneTexto) {
-                    dropzoneTexto.innerHTML = '<span class="text-success fw-semibold"><i class="bi bi-check2-all me-1"></i>' + count + ' archivo(s) listo(s) para subir</span>';
-                }
-                if (dropzoneIcon) {
-                    dropzoneIcon.className = 'bi bi-file-earmark-check text-success';
-                }
-            } else {
-                if (filePreviewList) filePreviewList.classList.add('d-none');
-                if (dropzoneTexto) dropzoneTexto.textContent = 'Arrastra tus archivos aquí o haz clic para seleccionar';
+
+                    itemsHtml += '<div class="d-flex justify-content-between align-items-center p-2 bg-white rounded-3 border">' +
+                        '<div class="d-flex align-items-center gap-2 text-truncate me-2">' +
+                            '<i class="bi ' + icon + ' fs-4"></i>' +
+                            '<div class="text-truncate">' +
+                                '<span class="fw-medium text-dark d-block text-truncate" title="' + escapeHtml(file.name) + '">' + escapeHtml(file.name) + '</span>' +
+                                '<small class="text-muted">' + sizeFmt + (isTooLarge ? ' <span class="text-danger fw-bold">(Excede ' + MAX_MB + ' MB)</span>' : '') + '</small>' +
+                            '</div>' +
+                        '</div>' +
+                        '<button type="button" class="btn btn-outline-danger btn-sm rounded-pill px-3 flex-shrink-0 btn-quitar-nuevo-doc" data-index="' + index + '" title="Quitar este documento">' +
+                            '<i class="bi bi-trash me-1"></i> Quitar' +
+                        '</button>' +
+                    '</div>';
+                });
+
+                itemsHtml += '</div></div></div>';
+                filePreviewList.innerHTML = itemsHtml;
+                filePreviewList.classList.remove('d-none');
+
+                filePreviewList.querySelectorAll('.btn-quitar-nuevo-doc').forEach(btn => {
+                    btn.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        const idx = parseInt(this.dataset.index, 10);
+                        archivosSeleccionados.splice(idx, 1);
+                        sincronizarInputFiles();
+                        renderizarListaArchivos();
+                    });
+                });
+            }
+        }
+
+        // Estado del dropzone según el cupo disponible (existentes + nuevos)
+        // IMPORTANTE: nunca deshabilitamos pdfInput (input.disabled = true), porque un
+        // input deshabilitado NO se envía con el formulario y se perderían los archivos
+        // ya seleccionados. En vez de eso, solo bloqueamos visualmente y evitamos que se
+        // abra el diálogo de selección (ver listener de 'click' más abajo).
+        if (disponibles <= 0) {
+            dropzoneContainer.classList.add('opacity-50');
+            dropzoneContainer.style.cursor = 'not-allowed';
+            if (dropzoneTexto) {
+                dropzoneTexto.innerHTML = '<span class="text-danger fw-semibold"><i class="bi bi-exclamation-circle me-1"></i>Límite de ' + MAX_ARCHIVOS + ' documentos alcanzado. Elimina uno para poder subir otro.</span>';
+            }
+            if (dropzoneIcon) {
+                dropzoneIcon.className = 'bi bi-slash-circle text-danger';
+            }
+        } else {
+            dropzoneContainer.classList.remove('opacity-50');
+            dropzoneContainer.style.cursor = 'pointer';
+
+            if (archivosSeleccionados.length === 0) {
+                if (dropzoneTexto) dropzoneTexto.textContent = 'Arrastra tus archivos aquí o haz clic para seleccionar (máximo 2)';
                 if (dropzoneIcon) dropzoneIcon.className = 'bi bi-cloud-arrow-up text-primary';
+            } else {
+                if (dropzoneTexto) {
+                    dropzoneTexto.innerHTML = '<span class="text-success fw-semibold"><i class="bi bi-check2-all me-1"></i>' + archivosSeleccionados.length + ' documento(s) seleccionado(s)' + (disponibles > 0 ? ' · Puedes agregar ' + disponibles + ' más' : '') + '</span>';
+                }
+                if (dropzoneIcon) dropzoneIcon.className = 'bi bi-file-earmark-check text-success';
+            }
+        }
+    }
+
+    function procesarNuevosArchivos(nuevosFiles) {
+        if (!nuevosFiles || nuevosFiles.length === 0) return;
+
+        let agregados = 0;
+        let excedioLimite = false;
+
+        for (let i = 0; i < nuevosFiles.length; i++) {
+            const file = nuevosFiles[i];
+
+            if (espaciosDisponibles() <= 0) {
+                excedioLimite = true;
+                break;
+            }
+
+            const yaExiste = archivosSeleccionados.some(f => f.name === file.name && f.size === file.size && f.lastModified === file.lastModified);
+            if (!yaExiste) {
+                if (file.size > MAX_MB * 1024 * 1024) {
+                    alert('El archivo "' + file.name + '" supera el límite de ' + MAX_MB + ' MB y no se puede adjuntar.');
+                    continue;
+                }
+                archivosSeleccionados.push(file);
+                agregados++;
+            }
+        }
+
+        if (excedioLimite) {
+            alert('Ya tienes ' + MAX_ARCHIVOS + ' documentos entre los existentes y los nuevos. Elimina alguno para poder adjuntar otro.');
+        }
+
+        sincronizarInputFiles();
+        renderizarListaArchivos();
+    }
+
+    if (pdfInput) {
+        // Evita que se abra el selector de archivos si ya no hay cupo disponible,
+        // sin deshabilitar el input (así los archivos ya elegidos sí se envían).
+        pdfInput.addEventListener('click', function (e) {
+            if (espaciosDisponibles() <= 0) {
+                e.preventDefault();
+                alert('Ya tienes ' + MAX_ARCHIVOS + ' documentos entre los existentes y los nuevos. Elimina alguno para poder adjuntar otro.');
+            }
+        });
+
+        pdfInput.addEventListener('change', function () {
+            if (this.files && this.files.length > 0) {
+                procesarNuevosArchivos(Array.from(this.files));
+            }
+        });
+
+        const formPadre = pdfInput.closest('form');
+        if (formPadre) {
+            formPadre.addEventListener('submit', function () {
+                // Aseguramos que el input contenga exactamente los archivos nuevos
+                // seleccionados justo antes de enviar el formulario.
+                sincronizarInputFiles();
+            });
+        }
+    }
+
+    if (dropzoneContainer) {
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropzoneContainer.addEventListener(eventName, function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (espaciosDisponibles() > 0) {
+                    dropzoneContainer.classList.add('dragover');
+                }
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropzoneContainer.addEventListener(eventName, function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                dropzoneContainer.classList.remove('dragover');
+            });
+        });
+
+        dropzoneContainer.addEventListener('drop', function (e) {
+            if (espaciosDisponibles() <= 0) {
+                alert('Ya tienes ' + MAX_ARCHIVOS + ' documentos entre los existentes y los nuevos. Elimina alguno para poder adjuntar otro.');
+                return;
+            }
+            const dt = e.dataTransfer;
+            if (dt && dt.files && dt.files.length > 0) {
+                procesarNuevosArchivos(Array.from(dt.files));
             }
         });
     }
@@ -507,11 +690,17 @@ document.addEventListener('DOMContentLoaded', function () {
             if (item) {
                 if (this.checked) {
                     item.classList.add('bg-danger-subtle', 'text-decoration-line-through', 'border-danger');
+                    documentosMarcadosParaEliminar++;
                 } else {
                     item.classList.remove('bg-danger-subtle', 'text-decoration-line-through', 'border-danger');
+                    documentosMarcadosParaEliminar--;
                 }
             }
+            renderizarListaArchivos();
         });
     });
+
+    // Estado inicial del dropzone (por si ya hay 2 documentos existentes desde el inicio)
+    renderizarListaArchivos();
 });
 </script>

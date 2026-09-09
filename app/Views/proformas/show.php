@@ -1,6 +1,16 @@
 <?php
 use Core\Auth;
 $p = $proforma;
+
+// Igual que en gestiones/show.php: n_cotizacion puede venir vacío/NULL, o
+// puede tener literalmente el texto "Mensualidad" guardado (en vez de estar
+// vacío) — hay que reconocer ambos casos como "es mensualidad", no solo el
+// vacío, para que el badge y el campo "Tipo" no digan "Cotización" quedando
+// la palabra "Mensualidad" como si fuera un número de cotización real.
+$cotizRaw = trim((string)($p['n_cotizacion'] ?? ''));
+$cotizUpper = mb_strtoupper($cotizRaw);
+$esMensual = (empty($cotizRaw) || $cotizUpper === 'MENSUALIDAD');
+
 $dias = days_between($p['fecha_solicitud'], $p['fecha_revision_proforma']);
 $diasEnCurso = $p['fecha_revision_proforma'] === null ? days_since($p['fecha_solicitud']) : null;
 $totalTrabajos = array_sum(array_map(fn($t) => (float) ($t['valor'] ?? 0), $trabajos));
@@ -17,13 +27,13 @@ $totalTrabajos = array_sum(array_map(fn($t) => (float) ($t['valor'] ?? 0), $trab
                 <span class="badge bg-primary-subtle text-primary fw-medium px-3 py-2">
                     <i class="bi bi-building me-1"></i><?= e($p['proveedor_nombre'] ?? '—') ?>
                 </span>
-                <?php if (empty($p['n_cotizacion'])): ?>
+                <?php if ($esMensual): ?>
                     <span class="badge bg-secondary-subtle text-secondary fw-medium px-3 py-2">
                         <i class="bi bi-calendar-month me-1"></i>Mensualidad
                     </span>
                 <?php else: ?>
                     <span class="badge bg-info-subtle text-info-emphasis fw-medium px-3 py-2">
-                        <i class="bi bi-file-text me-1"></i>Cotización <?= e($p['n_cotizacion']) ?>
+                        <i class="bi bi-file-text me-1"></i>Cotización  <?= e($p['n_cotizacion']) ?>
                     </span>
                 <?php endif; ?>
             </div>
@@ -99,7 +109,7 @@ $totalTrabajos = array_sum(array_map(fn($t) => (float) ($t['valor'] ?? 0), $trab
                         <div class="col-sm-6 col-md-4">
                             <div class="info-field">
                                 <span class="info-label"><i class="bi bi-tag me-1"></i> Tipo</span>
-                                <span class="info-value"><?= empty($p['n_cotizacion']) ? 'Mensualidad' : 'Cotización ' . e($p['n_cotizacion']) ?></span>
+                                <span class="info-value"><?= $esMensual ? 'Mensualidad' : 'Cotización ' ?></span>
                             </div>
                         </div>
                         <div class="col-sm-6 col-md-4">

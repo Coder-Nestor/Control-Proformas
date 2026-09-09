@@ -227,8 +227,8 @@ $val = fn($campo) => e($p[$campo] ?? ($prefill[$campo] ?? ''));
                 <div class="mb-2" id="dropzoneIconWrap">
                     <i class="bi bi-cloud-arrow-up text-primary" id="dropzoneIcon" style="font-size: 2.2rem;"></i>
                 </div>
-                <p class="mb-1 fw-semibold text-dark" id="dropzoneTexto">Arrastra tus archivos aquí o haz clic para seleccionar</p>
-                <small class="text-muted d-block mb-2">Puedes seleccionar múltiples archivos PDF o imágenes (JPG, PNG, GIF, WEBP). Límite de 5 MB por archivo.</small>
+                <p class="mb-1 fw-semibold text-dark" id="dropzoneTexto">Arrastra tus archivos aquí o haz clic para seleccionar (máximo 2)</p>
+                <small class="text-muted d-block mb-2">Puedes seleccionar un máximo de 2 archivos (PDF o imágenes JPG, PNG, GIF, WEBP). Límite de 5 MB por archivo.</small>
                 <input type="file" name="documentos[]" accept="application/pdf,image/jpeg,image/png,image/gif,image/webp" class="form-control" id="pdfInput" multiple>
             </div>
             <div id="filePreviewList" class="mt-2 d-none"></div>
@@ -673,55 +673,211 @@ document.addEventListener('DOMContentLoaded', function () {
         return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
+    // --- Múltiples documentos con acumulación y eliminación interactiva (Máx 2) ---
+    const MAX_ARCHIVOS = 2;
+    const MAX_MB = 5;
     const pdfInput = document.getElementById('pdfInput');
     const filePreviewList = document.getElementById('filePreviewList');
     const dropzoneTexto = document.getElementById('dropzoneTexto');
     const dropzoneIcon = document.getElementById('dropzoneIcon');
 
-    if (pdfInput) {
-        pdfInput.addEventListener('change', function () {
-            if (filePreviewList) filePreviewList.innerHTML = '';
-            if (pdfInput.files && pdfInput.files.length > 0) {
-                const count = pdfInput.files.length;
-                let hayErrorTamano = false;
-                let itemsHtml = '<div class="alert alert-light border py-2 px-3 mb-2 rounded-3"><div class="fw-semibold small mb-2 text-primary"><i class="bi bi-paperclip me-1"></i>' + count + ' archivo(s) seleccionado(s) para subir:</div><ul class="list-unstyled mb-0 small">';
-                
-                for (let i = 0; i < pdfInput.files.length; i++) {
-                    const file = pdfInput.files[i];
+    const dropzoneContainer = document.getElementById('dropzoneContainer');
+
+    // Documentos que YA están guardados en esta proforma (cuentan para el límite de 2)
+    const totalDocumentosExistentes = <?= json_encode($isEdit && !empty($documentos) ? count($documentos) : 0) ?>;
+    let documentosMarcadosParaEliminar = 0;
+
+    let archivosSeleccionados = [];
+
+    function espaciosDisponibles() {
+        const existentesActivos = totalDocumentosExistentes - documentosMarcadosParaEliminar;
+        return MAX_ARCHIVOS - existentesActivos - archivosSeleccionados.length;
+    }
+
+    function sincronizarInputFiles() {
+        if (!pdfInput) return;
+        try {
+            const dt = new DataTransfer();
+            archivosSeleccionados.forEach(file => dt.items.add(file));
+            pdfInput.files = dt.files;
+        } catch (e) {
+            console.error('Error al sincronizar archivos con DataTransfer:', e);
+        }
+    }
+
+    function renderizarListaArchivos() {
+        const disponibles = espaciosDisponibles();
+
+        if (filePreviewList) {
+            filePreviewList.innerHTML = '';
+
+            if (archivosSeleccionados.length === 0) {
+                filePreviewList.classList.add('d-none');
+            } else {
+                const count = archivosSeleccionados.length;
+                let itemsHtml = '<div class="card border border-primary-subtle shadow-xs mt-3">' +
+                    '<div class="card-header bg-primary bg-opacity-10 py-2 px-3 d-flex justify-content-between align-items-center">' +
+                        '<span class="fw-semibold small text-primary"><i class="bi bi-paperclip me-1"></i>' + count + ' documento(s) nuevo(s) listo(s) para subir</span>' +
+                        '<span class="badge bg-primary rounded-pill">' + count + '/' + MAX_ARCHIVOS + '</span>' +
+                    '</div>' +
+                    '<div class="card-body p-2">' +
+                        '<div class="d-flex flex-column gap-2">';
+
+                archivosSeleccionados.forEach((file, index) => {
                     const mb = (file.size / (1024 * 1024)).toFixed(2);
                     const kb = (file.size / 1024).toFixed(0);
                     const sizeFmt = file.size >= 1048576 ? mb + ' MB' : kb + ' KB';
-                    const isTooLarge = file.size > 5 * 1024 * 1024;
-                    if (isTooLarge) hayErrorTamano = true;
-                    
+                    const isTooLarge = file.size > MAX_MB * 1024 * 1024;
                     const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
                     const icon = isPdf ? 'bi-file-earmark-pdf-fill text-danger' : 'bi-file-earmark-image-fill text-primary';
-                    
-                    itemsHtml += '<li class="d-flex justify-content-between align-items-center py-1 border-bottom border-light">' +
-                        '<span><i class="bi ' + icon + ' me-2"></i> ' + escapeHtml(file.name) + '</span>' +
-                        '<span class="badge ' + (isTooLarge ? 'bg-danger' : 'bg-secondary') + '">' + sizeFmt + (isTooLarge ? ' (Excede 5 MB)' : '') + '</span>' +
-                        '</li>';
-                }
-                itemsHtml += '</ul>';
-                if (hayErrorTamano) {
-                    itemsHtml += '<div class="text-danger small mt-2 fw-semibold"><i class="bi bi-exclamation-triangle-fill me-1"></i>Atención: Uno o más archivos superan el límite de 5 MB y serán ignorados.</div>';
-                }
-                itemsHtml += '</div>';
-                
-                if (filePreviewList) {
-                    filePreviewList.innerHTML = itemsHtml;
-                    filePreviewList.classList.remove('d-none');
-                }
-                if (dropzoneTexto) {
-                    dropzoneTexto.innerHTML = '<span class="text-success fw-semibold"><i class="bi bi-check2-all me-1"></i>' + count + ' archivo(s) listo(s) para subir</span>';
-                }
-                if (dropzoneIcon) {
-                    dropzoneIcon.className = 'bi bi-file-earmark-check text-success';
-                }
-            } else {
-                if (filePreviewList) filePreviewList.classList.add('d-none');
-                if (dropzoneTexto) dropzoneTexto.textContent = 'Arrastra tus archivos aquí o haz clic para seleccionar';
+
+                    itemsHtml += '<div class="d-flex justify-content-between align-items-center p-2 bg-white rounded-3 border">' +
+                        '<div class="d-flex align-items-center gap-2 text-truncate me-2">' +
+                            '<i class="bi ' + icon + ' fs-4"></i>' +
+                            '<div class="text-truncate">' +
+                                '<span class="fw-medium text-dark d-block text-truncate" title="' + escapeHtml(file.name) + '">' + escapeHtml(file.name) + '</span>' +
+                                '<small class="text-muted">' + sizeFmt + (isTooLarge ? ' <span class="text-danger fw-bold">(Excede ' + MAX_MB + ' MB)</span>' : '') + '</small>' +
+                            '</div>' +
+                        '</div>' +
+                        '<button type="button" class="btn btn-outline-danger btn-sm rounded-pill px-3 flex-shrink-0 btn-quitar-nuevo-doc" data-index="' + index + '" title="Quitar este documento">' +
+                            '<i class="bi bi-trash me-1"></i> Quitar' +
+                        '</button>' +
+                    '</div>';
+                });
+
+                itemsHtml += '</div></div></div>';
+                filePreviewList.innerHTML = itemsHtml;
+                filePreviewList.classList.remove('d-none');
+
+                filePreviewList.querySelectorAll('.btn-quitar-nuevo-doc').forEach(btn => {
+                    btn.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        const idx = parseInt(this.dataset.index, 10);
+                        archivosSeleccionados.splice(idx, 1);
+                        sincronizarInputFiles();
+                        renderizarListaArchivos();
+                    });
+                });
+            }
+        }
+
+        // Estado del dropzone según el cupo disponible (existentes + nuevos)
+        // IMPORTANTE: nunca deshabilitamos pdfInput (input.disabled = true), porque un
+        // input deshabilitado NO se envía con el formulario y se perderían los archivos
+        // ya seleccionados. En vez de eso, solo bloqueamos visualmente y evitamos que se
+        // abra el diálogo de selección (ver listener de 'click' más abajo).
+        if (disponibles <= 0) {
+            dropzoneContainer.classList.add('opacity-50');
+            dropzoneContainer.style.cursor = 'not-allowed';
+            if (dropzoneTexto) {
+                dropzoneTexto.innerHTML = '<span class="text-danger fw-semibold"><i class="bi bi-exclamation-circle me-1"></i>Límite de ' + MAX_ARCHIVOS + ' documentos alcanzado. Elimina uno para poder subir otro.</span>';
+            }
+            if (dropzoneIcon) {
+                dropzoneIcon.className = 'bi bi-slash-circle text-danger';
+            }
+        } else {
+            dropzoneContainer.classList.remove('opacity-50');
+            dropzoneContainer.style.cursor = 'pointer';
+
+            if (archivosSeleccionados.length === 0) {
+                if (dropzoneTexto) dropzoneTexto.textContent = 'Arrastra tus archivos aquí o haz clic para seleccionar (máximo 2)';
                 if (dropzoneIcon) dropzoneIcon.className = 'bi bi-cloud-arrow-up text-primary';
+            } else {
+                if (dropzoneTexto) {
+                    dropzoneTexto.innerHTML = '<span class="text-success fw-semibold"><i class="bi bi-check2-all me-1"></i>' + archivosSeleccionados.length + ' documento(s) seleccionado(s)' + (disponibles > 0 ? ' · Puedes agregar ' + disponibles + ' más' : '') + '</span>';
+                }
+                if (dropzoneIcon) dropzoneIcon.className = 'bi bi-file-earmark-check text-success';
+            }
+        }
+    }
+
+    function procesarNuevosArchivos(nuevosFiles) {
+        if (!nuevosFiles || nuevosFiles.length === 0) return;
+
+        let agregados = 0;
+        let excedioLimite = false;
+
+        for (let i = 0; i < nuevosFiles.length; i++) {
+            const file = nuevosFiles[i];
+
+            if (espaciosDisponibles() <= 0) {
+                excedioLimite = true;
+                break;
+            }
+
+            const yaExiste = archivosSeleccionados.some(f => f.name === file.name && f.size === file.size && f.lastModified === file.lastModified);
+            if (!yaExiste) {
+                if (file.size > MAX_MB * 1024 * 1024) {
+                    alert('El archivo "' + file.name + '" supera el límite de ' + MAX_MB + ' MB y no se puede adjuntar.');
+                    continue;
+                }
+                archivosSeleccionados.push(file);
+                agregados++;
+            }
+        }
+
+        if (excedioLimite) {
+            alert('Ya tienes ' + MAX_ARCHIVOS + ' documentos entre los existentes y los nuevos. Elimina alguno para poder adjuntar otro.');
+        }
+
+        sincronizarInputFiles();
+        renderizarListaArchivos();
+    }
+
+    if (pdfInput) {
+        // Evita que se abra el selector de archivos si ya no hay cupo disponible,
+        // sin deshabilitar el input (así los archivos ya elegidos sí se envían).
+        pdfInput.addEventListener('click', function (e) {
+            if (espaciosDisponibles() <= 0) {
+                e.preventDefault();
+                alert('Ya tienes ' + MAX_ARCHIVOS + ' documentos entre los existentes y los nuevos. Elimina alguno para poder adjuntar otro.');
+            }
+        });
+
+        pdfInput.addEventListener('change', function () {
+            if (this.files && this.files.length > 0) {
+                procesarNuevosArchivos(Array.from(this.files));
+            }
+        });
+
+        const formPadre = pdfInput.closest('form');
+        if (formPadre) {
+            formPadre.addEventListener('submit', function () {
+                // Aseguramos que el input contenga exactamente los archivos nuevos
+                // seleccionados justo antes de enviar el formulario.
+                sincronizarInputFiles();
+            });
+        }
+    }
+
+    if (dropzoneContainer) {
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropzoneContainer.addEventListener(eventName, function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (espaciosDisponibles() > 0) {
+                    dropzoneContainer.classList.add('dragover');
+                }
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropzoneContainer.addEventListener(eventName, function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                dropzoneContainer.classList.remove('dragover');
+            });
+        });
+
+        // Manejar los archivos que realmente se soltaron
+        dropzoneContainer.addEventListener('drop', function (e) {
+            if (espaciosDisponibles() <= 0) {
+                alert('Ya tienes ' + MAX_ARCHIVOS + ' documentos entre los existentes y los nuevos. Elimina alguno para poder adjuntar otro.');
+                return;
+            }
+            const dt = e.dataTransfer;
+            if (dt && dt.files && dt.files.length > 0) {
+                procesarNuevosArchivos(Array.from(dt.files));
             }
         });
     }
@@ -733,11 +889,17 @@ document.addEventListener('DOMContentLoaded', function () {
             if (item) {
                 if (this.checked) {
                     item.classList.add('bg-danger-subtle', 'text-decoration-line-through', 'border-danger');
+                    documentosMarcadosParaEliminar++;
                 } else {
                     item.classList.remove('bg-danger-subtle', 'text-decoration-line-through', 'border-danger');
+                    documentosMarcadosParaEliminar--;
                 }
             }
+            renderizarListaArchivos();
         });
     });
+
+    // Estado inicial del dropzone (por si ya hay 2 documentos existentes desde el inicio)
+    renderizarListaArchivos();
 });
 </script>

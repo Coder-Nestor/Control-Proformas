@@ -68,6 +68,15 @@ class Gestion extends Model
 
     public static function numeroCotizacionExiste(string $numero, ?int $excludeId = null): bool
     {
+        // "Gestión Interna" y "Mensualidad" son textos marcadores, no números
+        // de cotización reales — muchos registros de estos tipos comparten
+        // intencionalmente el mismo texto, así que nunca deben considerarse
+        // un conflicto de unicidad.
+        $numeroNormalizado = mb_strtoupper(trim($numero));
+        if (in_array($numeroNormalizado, ['GESTIÓN INTERNA', 'GESTION INTERNA', 'MENSUALIDAD'], true)) {
+            return false;
+        }
+
         $sql = 'SELECT COUNT(*) FROM gestiones WHERE n_cotizacion = :numero AND eliminado_en IS NULL';
         $params = ['numero' => $numero];
         if ($excludeId !== null) {

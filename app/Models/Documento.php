@@ -40,6 +40,26 @@ class Documento extends Model
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
+    public static function deEntidades(string $tipoEntidad, array $ids): array
+    {
+        $ids = array_values(array_filter(array_map('intval', $ids)));
+        if (empty($ids)) {
+            return [];
+        }
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $sql = 'SELECT * FROM ' . self::$table . ' 
+                WHERE tipo_entidad = ? AND id_entidad IN (' . $placeholders . ') AND eliminado_en IS NULL
+                ORDER BY orden ASC, id ASC';
+        $stmt = self::db()->prepare($sql);
+        $stmt->execute(array_merge([$tipoEntidad], $ids));
+        $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        $result = [];
+        foreach ($rows as $row) {
+            $result[$row['id_entidad']][] = $row;
+        }
+        return $result;
+    }
+
     public static function contar(string $tipoEntidad, int $idEntidad): int
     {
         $sql = 'SELECT COUNT(*) as cnt FROM ' . self::$table . ' 

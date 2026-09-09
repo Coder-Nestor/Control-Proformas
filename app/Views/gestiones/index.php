@@ -109,6 +109,11 @@
                             $trabajos = $trabajosPorGestion[$g['id']] ?? [];
                             $rowspan = max(1, count($trabajos));
                             $bgClase = $gIndex % 2 === 0 ? 'bg-white' : 'bg-light-subtle';
+                            $cotizRaw = trim((string)($g['n_cotizacion'] ?? ''));
+                            $cotizUpper = mb_strtoupper($cotizRaw);
+                            $esInterna = ($cotizUpper === 'GESTIÓN INTERNA' || $cotizUpper === 'GESTION INTERNA' || (empty($cotizRaw) && empty($g['aprobado_por']) && empty($g['fecha_aprobacion_trabajo']) && empty($g['fecha_finalizacion_trabajo']) && empty($g['fecha_revision_cotizacion'])));
+                            $esMensual = !$esInterna && (empty($cotizRaw) || $cotizUpper === 'MENSUALIDAD');
+                            $cotizacionLabel = $esInterna ? 'Gestión Interna' : (!empty($g['n_cotizacion']) ? $g['n_cotizacion'] : 'Mensualidad');
                         ?>
                         <?php if (empty($trabajos)): ?>
                             <tr class="<?= $bgClase ?>">
@@ -116,7 +121,7 @@
                                     <input type="checkbox" class="form-check-input check-gestion"
                                            data-id="<?= (int) $g['id'] ?>"
                                            data-proveedor="<?= e($g['proveedor_nombre'] ?? '—') ?>"
-                                           data-cotizacion="<?= !empty($g['n_cotizacion']) ? e($g['n_cotizacion']) : 'Mensualidad' ?>"
+                                           data-cotizacion="<?= e($cotizacionLabel) ?>"
                                            data-valor="<?= e(fmt_money($g['valor_total'])) ?>"
                                            data-comentario="<?= e($g['comentario'] ?? '—') ?>"
                                            data-trabajo="Sin trabajos registrados">
@@ -131,7 +136,11 @@
                                 </td>
                                 <td><?= e($g['proveedor_nombre'] ?? '—') ?></td>
                                 <td>
-                                    <?php if (!empty($g['n_cotizacion'])): ?>
+                                    <?php if ($esInterna): ?>
+                                        <span class="badge bg-secondary-subtle text-secondary fw-normal">
+                                            <i class="bi bi-shield-check me-1"></i>Gestión Interna
+                                        </span>
+                                    <?php elseif (!empty($g['n_cotizacion']) && !$esMensual): ?>
                                         <span class="badge bg-primary-subtle text-primary fw-normal">
                                             <?= e($g['n_cotizacion']) ?>
                                         </span>
@@ -151,6 +160,19 @@
                                 </td>
                                 <td class="text-end pe-3">
                                     <div class="d-flex justify-content-end gap-1">
+                                        <?php 
+                                            $docsGestion = $documentosPorGestion[$g['id']] ?? []; 
+                                            $primerDoc = !empty($docsGestion) ? $docsGestion[0]['nombre_archivo'] : (!empty($g['documento_pdf']) ? $g['documento_pdf'] : null);
+                                            $totalDocs = count($docsGestion) ?: (!empty($g['documento_pdf']) ? 1 : 0);
+                                        ?>
+                                        <?php if ($primerDoc): ?>
+                                        <a href="<?= base_url('uploads/gestiones/' . $primerDoc) ?>"
+                                           target="_blank"
+                                           class="btn btn-outline-danger btn-sm rounded-pill"
+                                           title="<?= $totalDocs > 1 ? 'Ver documentos (' . $totalDocs . ')' : 'Ver documento' ?>">
+                                            <i class="bi bi-file-earmark-pdf"></i>
+                                        </a>
+                                        <?php endif; ?>
                                         <?php if (Auth::can('gestiones.editar')): ?>
                                         <a href="<?= base_url('/gestiones/' . $g['id'] . '/editar') ?>" 
                                            class="btn btn-outline-primary btn-sm rounded-pill" title="Editar">
@@ -181,7 +203,7 @@
                                             <input type="checkbox" class="form-check-input check-gestion"
                                                    data-id="<?= (int) $g['id'] ?>"
                                                    data-proveedor="<?= e($g['proveedor_nombre'] ?? '—') ?>"
-                                                   data-cotizacion="<?= !empty($g['n_cotizacion']) ? e($g['n_cotizacion']) : 'Mensualidad' ?>"
+                                                   data-cotizacion="<?= e($cotizacionLabel) ?>"
                                                    data-valor="<?= e(fmt_money($g['valor_total'])) ?>"
                                                    data-comentario="<?= e($g['comentario'] ?? '—') ?>"
                                                    data-trabajo="<?= $descripcionesImpresion ?>">
@@ -203,7 +225,11 @@
                                             <?= e($g['proveedor_nombre'] ?? '—') ?>
                                         </td>
                                         <td rowspan="<?= $rowspan ?>" class="align-middle">
-                                            <?php if (!empty($g['n_cotizacion'])): ?>
+                                            <?php if ($esInterna): ?>
+                                                <span class="badge bg-secondary-subtle text-secondary fw-normal">
+                                                    <i class="bi bi-shield-check me-1"></i>Gestión Interna
+                                                </span>
+                                            <?php elseif (!empty($g['n_cotizacion']) && !$esMensual): ?>
                                                 <span class="badge bg-primary-subtle text-primary fw-normal">
                                                     <?= e($g['n_cotizacion']) ?>
                                                 </span>
@@ -264,11 +290,16 @@
                                     <?php if ($index === 0): ?>
                                         <td class="text-end pe-3 align-middle" rowspan="<?= $rowspan ?>">
                                             <div class="d-flex justify-content-end gap-1">
-                                                <?php if (!empty($g['documento_pdf'])): ?>
-                                                    <a href="<?= base_url('uploads/gestiones/' . $g['documento_pdf']) ?>" 
-                                                       target="_blank" 
-                                                       class="btn btn-outline-danger btn-sm rounded-pill" 
-                                                       title="Ver PDF">
+                                                <?php 
+                                                    $docsGestion = $documentosPorGestion[$g['id']] ?? []; 
+                                                    $primerDoc = !empty($docsGestion) ? $docsGestion[0]['nombre_archivo'] : (!empty($g['documento_pdf']) ? $g['documento_pdf'] : null);
+                                                    $totalDocs = count($docsGestion) ?: (!empty($g['documento_pdf']) ? 1 : 0);
+                                                ?>
+                                                <?php if ($primerDoc): ?>
+                                                    <a href="<?= base_url('uploads/gestiones/' . $primerDoc) ?>"
+                                                        target="_blank"
+                                                        class="btn btn-outline-danger btn-sm rounded-pill"
+                                                        title="<?= $totalDocs > 1 ? 'Ver documentos (' . $totalDocs . ')' : 'Ver documento' ?>">
                                                         <i class="bi bi-file-earmark-pdf"></i>
                                                     </a>
                                                 <?php endif; ?>
@@ -559,7 +590,7 @@ document.addEventListener('DOMContentLoaded', function () {
             filasHtml +=
                 '<tr>' +
                 '<td>' + chk.dataset.proveedor + '</td>' +
-                '<td>' + chk.dataset.cotizacion + '</td>' +
+              //  '<td>' + chk.dataset.cotizacion + '</td>' +
                 '<td>' + chk.dataset.valor + '</td>' +
                 '<td>' + chk.dataset.trabajo + '</td>' +
                 '<td>' + chk.dataset.comentario + '</td>' +
@@ -578,8 +609,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 '</div>' +
                 '<div class="const-detalle-label">Detalle:</div>' +
                 '<table class="const-tabla">' +
-                    '<colgroup><col style="width:15%"><col style="width:15%"><col style="width:12%"><col style="width:33%"><col style="width:25%"></colgroup>' +
-                    '<thead><tr><th>Proveedor</th><th>Cotización</th><th>Valor</th><th>Trabajo</th><th>Comentarios</th></tr></thead>' +
+                    '<colgroup><col style="width:15%"><col style="width:12%"><col style="width:33%"><col style="width:25%"></colgroup>' +
+                    '<thead><tr><th>Proveedor</th><th>Valor</th><th>Trabajo</th><th>Comentarios</th></tr></thead>' +
                     '<tbody>' + filasHtml + '</tbody>' +
                 '</table>' +
                 (totalPaginas > 1 ? '<div class="const-pagina-num">Página ' + paginaActual + ' de ' + totalPaginas + '</div>' : '') +
@@ -592,12 +623,12 @@ document.addEventListener('DOMContentLoaded', function () {
                     '</div>' +
                     '<div class="const-firma-bloque">' +
                         '<div class="rotulo">RECIBIDO POR</div>' +
-                        '<div> </div>' +
+                        
                         '<div class="const-firma-linea">Firma: ________________________</div>' +
                     '</div>' +
                     '<div class="const-cc">' +
                         '<div>CC.<br>Archivo.</div>' +
-                        
+                       
                     '</div>' +
                 '</div>' +
             '</div>';

@@ -34,6 +34,7 @@ class GestionController extends Controller
         $gestiones = Gestion::allConDetalle($filtros, $porPagina, $offset);
 
         $trabajosPorGestion = [];
+        $documentosPorGestion = Documento::deEntidades('gestion', array_column($gestiones, 'id'));
         foreach ($gestiones as $g) {
             $trabajosPorGestion[$g['id']] = Trabajo::deGestion((int) $g['id']);
         }
@@ -41,6 +42,7 @@ class GestionController extends Controller
         $this->view('gestiones/index', [
             'gestiones' => $gestiones,
             'trabajosPorGestion' => $trabajosPorGestion,
+            'documentosPorGestion' => $documentosPorGestion,
             'proveedores' => Proveedor::activos(),
             'proveedoresHabilitadosIds' => array_column(Proveedor::habilitadosParaProforma(), 'id'),
             'filtros' => $filtros,
@@ -65,7 +67,7 @@ class GestionController extends Controller
         $data = $this->collectFormData();
 
         if (!empty($data['n_cotizacion']) && Gestion::numeroCotizacionExiste($data['n_cotizacion'])) {
-            $this->flash('error', 'Ese número de cotización ya está registrado en otra gestión. Elige uno distinto.');
+           $this->flash('error', 'Ese número de cotización ya está registrado en otra gestión. Elige uno distinto.');
             $this->view('gestiones/form', [
                 'gestion' => $data,
                 'trabajos' => $this->collectTrabajos(),
@@ -101,7 +103,13 @@ class GestionController extends Controller
             $this->view('errors/404_inline', []);
             return;
         }
-        $this->view('gestiones/show', ['gestion' => $gestion, 'documentos' => Documento::deEntidad('gestion', $id), 'trabajos' => Trabajo::deGestion($id), 'historial' => Gestion::historialDe($id)]);
+        $this->view('gestiones/show', [
+            'gestion' => $gestion,
+            'documentos' => Documento::deEntidad('gestion', $id),
+            'trabajos' => Trabajo::deGestion($id),
+            'historial' => Gestion::historialDe($id),
+            'proveedoresHabilitadosIds' => array_column(Proveedor::habilitadosParaProforma(), 'id'),
+        ]);
     }
 
     public function edit(array $params): void
@@ -267,10 +275,29 @@ class GestionController extends Controller
         }
         $data['proveedor_id'] = $data['proveedor_id'] !== null ? (int) $data['proveedor_id'] : null;
 
-        // En modo Mensualidad (sin N° de cotización) "Aprobado por" no aplica
-        // — se ignora aunque llegue algo en la petición, sin depender de que
-        // el formulario lo haya escondido correctamente.
-        if (empty($data['n_cotizacion'])) {
+        // Sin columna nueva en la BD: n_cotizacion sigue siendo el único lugar
+        // donde se guarda el tipo. Cotización guarda su número real;
+        // Mensualidad y Gestión Interna guardan un texto marcador FIJO y
+        // DISTINTO entre sí — antes Mensualidad guardaba NULL, igual que
+        // cuando faltaban las fechas en Gestión Interna, y eso los hacía
+        // indistinguibles en el listado. Ahora cada uno tiene su propio texto.
+        //
+        // Si la tabla ya tiene la columna tipo_gestion (opcional), también se
+        // llena aquí para mantenerla sincronizada con el texto marcador —
+        // si la columna no existe en tu base de datos, quita esta línea.
+        $tipoGestion = $this->input('tipo_gestion', 'cotizacion');
+        if (!in_array($tipoGestion, ['cotizacion', 'mensualidad', 'interna'], true)) {
+            $tipoGestion = 'cotizacion';
+        }
+        $data['tipo_gestion'] = $tipoGestion;
+        if ($tipoGestion === 'interna') {
+            $data['n_cotizacion'] = 'Gestión Interna';
+            $data['aprobado_por'] = null;
+            $data['fecha_aprobacion_trabajo'] = null;
+            $data['fecha_finalizacion_trabajo'] = null;
+            $data['fecha_revision_cotizacion'] = null;
+        } elseif ($tipoGestion === 'mensualidad') {
+            $data['n_cotizacion'] = 'Mensualidad';
             $data['aprobado_por'] = null;
         }
 

@@ -149,11 +149,16 @@
                             </td>
                             <td class="text-end pe-3 py-2">
                                 <div class="d-flex justify-content-end gap-1">
-                                    <?php if (!empty($f['documento_pdf'])): ?>
-                                        <a href="<?= base_url('uploads/facturas/' . $f['documento_pdf']) ?>"
+                                    <?php 
+                                        $docsFactura = $documentosPorFactura[$f['id']] ?? []; 
+                                        $primerDoc = !empty($docsFactura) ? $docsFactura[0]['nombre_archivo'] : (!empty($f['documento_pdf']) ? $f['documento_pdf'] : null);
+                                        $totalDocs = count($docsFactura) ?: (!empty($f['documento_pdf']) ? 1 : 0);
+                                    ?>
+                                    <?php if ($primerDoc): ?>
+                                        <a href="<?= base_url('uploads/facturas/' . $primerDoc) ?>"
                                            target="_blank"
                                            class="btn btn-outline-danger btn-sm rounded-pill"
-                                           title="Ver PDF">
+                                           title="<?= $totalDocs > 1 ? 'Ver documentos (' . $totalDocs . ')' : 'Ver documento' ?>">
                                             <i class="bi bi-file-earmark-pdf"></i>
                                         </a>
                                     <?php endif; ?>
@@ -487,12 +492,12 @@ document.addEventListener('DOMContentLoaded', function () {
                     '</div>' +
                     '<div class="const-firma-bloque">' +
                         '<div class="rotulo">RECIBIDO POR</div>' +
-                        '<div>Departamento de ________________________________.</div>' +
+                        
                         '<div class="const-firma-linea">Firma: ________________________</div>' +
                     '</div>' +
                     '<div class="const-cc">' +
                         '<div>CC.<br>Archivo.</div>' +
-                        '<div>Fecha: ________________.</div>' +
+                      
                     '</div>' +
                 '</div>' +
             '</div>';

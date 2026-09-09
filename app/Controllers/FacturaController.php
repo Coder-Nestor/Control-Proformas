@@ -14,7 +14,14 @@ class FacturaController extends Controller
     public function index(): void
     {
         $filtros = ['estado' => $this->input('estado', ''), 'buscar' => $this->input('buscar', '')];
-        $this->view('facturas/index', ['facturas' => Factura::allConDetalle($filtros), 'estados' => Factura::ESTADOS, 'filtros' => $filtros]);
+        $facturas = Factura::allConDetalle($filtros);
+        $documentosPorFactura = Documento::deEntidades('factura', array_column($facturas, 'id'));
+        $this->view('facturas/index', [
+            'facturas' => $facturas,
+            'documentosPorFactura' => $documentosPorFactura,
+            'estados' => Factura::ESTADOS,
+            'filtros' => $filtros
+        ]);
     }
 
     public function create(): void

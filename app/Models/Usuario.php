@@ -22,14 +22,16 @@ class Usuario extends Model
         return $row ?: null;
     }
 
-    public static function allConRol(): array
+    public static function allConRol(bool $incluirAdministradores = true): array
     {
-        $stmt = self::db()->query(
+        $sql =
             'SELECT u.*, r.nombre AS rol_nombre
              FROM usuarios u
              INNER JOIN roles r ON r.id = u.rol_id
-             ORDER BY u.nombre'
-        );
+             WHERE (:incluir_administradores = 1 OR u.rol_id != 1)
+             ORDER BY u.nombre';
+        $stmt = self::db()->prepare($sql);
+        $stmt->execute(['incluir_administradores' => $incluirAdministradores ? 1 : 0]);
         return $stmt->fetchAll();
     }
 

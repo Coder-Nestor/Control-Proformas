@@ -14,22 +14,39 @@ class UsuarioController extends Controller
     public function index(): void
     {
         $this->view('usuarios/index', [
-            'usuarios' => Usuario::allConRol(),
+            'usuarios' => Usuario::allConRol($this->esAdministrador()),
         ]);
     }
 
     public function create(): void
     {
+        $esAdministrador = $this->esAdministrador();
+        $roles = Rol::all('nombre ASC');
+
+        if (!$esAdministrador) {
+            $roles = array_values(array_filter($roles, static fn (array $rol): bool => (int) $rol['id'] !== 1));
+        }
+
         $this->view('usuarios/form', [
-            'usuario' => null,
-            'roles'   => Rol::all('nombre ASC'),
-            'areas'   => Area::activas(),
+            'usuario'             => null,
+            'roles'               => $roles,
+            'areas'               => Area::activas(),
+            'esAdministrador'     => $esAdministrador,
+            'rolAdministradorBloqueado' => false,
         ]);
     }
 
     public function store(): void
     {
         $this->verifyCsrf();
+        $rolId = (int) $this->input('rol_id');
+
+        if (!$this->esAdministrador() && $rolId === 1) {
+            $this->flash('error', 'No tienes permiso para crear usuarios con el rol Administrador.');
+            $this->redirect('/usuarios/crear');
+            return;
+        }
+
         $errores = $this->validar();
 
         if ($errores) {
@@ -44,7 +61,7 @@ class UsuarioController extends Controller
             'nombre'        => $nombre,
             'email'         => $email,
             'password_hash' => password_hash($this->input('password'), PASSWORD_DEFAULT),
-            'rol_id'        => (int) $this->input('rol_id'),
+            'rol_id'        => $rolId,
             'area'          => $this->input('area', null) ?: null,
             'activo'        => 1,
         ]);
@@ -64,10 +81,20 @@ class UsuarioController extends Controller
             return;
         }
 
+        $esAdministrador = $this->esAdministrador();
+        $rolAdministradorBloqueado = !$esAdministrador && (int) $usuario['rol_id'] === 1;
+        $roles = Rol::all('nombre ASC');
+
+        if (!$esAdministrador && !$rolAdministradorBloqueado) {
+            $roles = array_values(array_filter($roles, static fn (array $rol): bool => (int) $rol['id'] !== 1));
+        }
+
         $this->view('usuarios/form', [
-            'usuario' => $usuario,
-            'roles'   => Rol::all('nombre ASC'),
-            'areas'   => Area::activas(),
+            'usuario'                    => $usuario,
+            'roles'                      => $roles,
+            'areas'                      => Area::activas(),
+            'esAdministrador'            => $esAdministrador,
+            'rolAdministradorBloqueado' => $rolAdministradorBloqueado,
         ]);
     }
 
@@ -85,13 +112,25 @@ class UsuarioController extends Controller
 
         $nombre = trim((string) $this->input('nombre'));
         $email  = trim((string) $this->input('email'));
+        $rolId  = (int) $this->input('rol_id');
+
+        if (!$this->esAdministrador() && $rolId === 1) {
+            $this->flash('error', 'No tienes permiso para asignar el rol Administrador.');
+            $this->redirect('/usuarios/' . $id . '/editar');
+            return;
+        }
+
+        $activo = $this->input('activo', (string) $usuarioAnt['activo']) === '1' ? 1 : 0;
+        if (!Auth::can('usuarios.activar')) {
+            $activo = (int) $usuarioAnt['activo'];
+        }
 
         $data = [
             'nombre' => $nombre,
             'email'  => $email,
-            'rol_id' => (int) $this->input('rol_id'),
+            'rol_id' => $rolId,
             'area'   => $this->input('area', null) ?: null,
-            'activo' => $this->input('activo', '1') === '1' ? 1 : 0,
+            'activo' => $activo,
         ];
 
         $password = $this->input('password', '');
@@ -181,5 +220,11 @@ class UsuarioController extends Controller
         if (!$password || strlen($password) < 6) $errores[] = 'La contraseña debe tener al menos 6 caracteres.';
 
         return $errores;
+    }
+
+    private function esAdministrador(): bool
+    {
+        $usuario = Usuario::find(Auth::id());
+        return $usuario && (int) $usuario['rol_id'] === 1;
     }
 }

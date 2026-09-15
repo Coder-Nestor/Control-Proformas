@@ -22,9 +22,11 @@ class Gestion extends Model
         }
         if (!empty($filtros['buscar'])) {
             $where .= ' AND (g.n_cotizacion LIKE :buscar1
-                        OR EXISTS (SELECT 1 FROM trabajos t3 WHERE t3.gestion_id = g.id AND t3.descripcion LIKE :buscar2))';
+                        OR EXISTS (SELECT 1 FROM trabajos t3 WHERE t3.gestion_id = g.id AND t3.descripcion LIKE :buscar2)
+                        OR EXISTS (SELECT 1 FROM proveedores pr_b WHERE pr_b.id = g.proveedor_id AND pr_b.nombre LIKE :buscar3))';
             $params['buscar1'] = '%' . $filtros['buscar'] . '%';
             $params['buscar2'] = '%' . $filtros['buscar'] . '%';
+            $params['buscar3'] = '%' . $filtros['buscar'] . '%';
         }
 
         return [$where, $params];

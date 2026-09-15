@@ -61,12 +61,12 @@ class OrdenCompra extends Model
                 FROM ordenes_compra oc
                 INNER JOIN proformas p ON p.id = oc.proforma_id
                 LEFT JOIN proveedores pr ON pr.id = p.proveedor_id
-                WHERE oc.eliminado_en IS NULL
-                  AND NOT EXISTS (SELECT 1 FROM facturas f WHERE f.orden_compra_id = oc.id AND f.eliminado_en IS NULL)";
-        if ($incluirId) {
-            $sql .= ' OR oc.id = :id';
-        }
-        $sql .= ' ORDER BY oc.id DESC';
+    WHERE oc.eliminado_en IS NULL
+  AND (NOT EXISTS (SELECT 1 FROM facturas f WHERE f.orden_compra_id = oc.id AND f.eliminado_en IS NULL)";
+if ($incluirId) {
+    $sql .= ' OR oc.id = :id';
+}
+$sql .= ') ORDER BY oc.id DESC';
         $stmt = self::db()->prepare($sql);
         if ($incluirId) {
             $stmt->execute(['id' => $incluirId]);

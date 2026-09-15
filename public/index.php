@@ -22,12 +22,32 @@ session_set_cookie_params([
 ]);
 session_start();
 
+$sessionVersion = (int) ($config['session']['version'] ?? 1);
+if (($_SESSION['_session_version'] ?? null) !== $sessionVersion) {
+    $_SESSION = [];
+    session_regenerate_id(true);
+    $_SESSION['_session_version'] = $sessionVersion;
+}
+
 use Core\Router;
 
 $router = new Router();
 $router->load(require __DIR__ . '/../config/routes.php');
 
 $uri    = $_SERVER['REQUEST_URI'] ?? '/';
+$basePath = rtrim((string) parse_url($config['app']['url'], PHP_URL_PATH), '/');
+if ($basePath !== '' && $basePath !== '/' && str_starts_with($uri, $basePath)) {
+    $uri = substr($uri, strlen($basePath));
+    if ($uri === '') {
+        $uri = '/';
+    }
+}
+if ($uri === '/public' || str_starts_with($uri, '/public/')) {
+    $uri = substr($uri, 7);
+    if ($uri === '') {
+        $uri = '/';
+    }
+}
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
 $router->dispatch($method, $uri);

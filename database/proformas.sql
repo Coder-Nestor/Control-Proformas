@@ -253,7 +253,7 @@ CREATE TABLE `permisos` (
 
 LOCK TABLES `permisos` WRITE;
 /*!40000 ALTER TABLE `permisos` DISABLE KEYS */;
-INSERT INTO `permisos` VALUES (1,'gestiones.ver','Gestiones','Ver el listado y el detalle de gestiones'),(2,'gestiones.crear','Gestiones','Crear una gestión nueva'),(3,'gestiones.editar','Gestiones','Editar una gestión existente'),(4,'gestiones.eliminar','Gestiones','Eliminar una gestión'),(5,'proformas.ver','Proformas','Ver el listado y el detalle de proformas'),(6,'proformas.crear','Proformas','Crear una proforma nueva'),(7,'proformas.editar','Proformas','Editar una proforma existente'),(8,'proformas.eliminar','Proformas','Eliminar una proforma'),(9,'ordenes.ver','Órdenes de compra','Ver el listado y el detalle de órdenes de compra'),(10,'ordenes.crear','Órdenes de compra','Crear una orden de compra nueva'),(11,'ordenes.editar','Órdenes de compra','Editar una orden de compra existente'),(12,'ordenes.eliminar','Órdenes de compra','Eliminar una orden de compra'),(13,'facturas.ver','Facturas','Ver el listado y el detalle de facturas'),(14,'facturas.crear','Facturas','Registrar una factura nueva'),(15,'facturas.editar','Facturas','Editar una factura existente'),(16,'facturas.eliminar','Facturas','Eliminar una factura'),(17,'entregas.ver','Entregas','Ver el listado y el detalle de entregas'),(18,'entregas.crear','Entregas','Registrar una entrega nueva'),(19,'entregas.editar','Entregas','Editar una entrega existente'),(20,'entregas.eliminar','Entregas','Eliminar una entrega'),(21,'proveedores.ver','Proveedores','Ver el catálogo de proveedores'),(22,'proveedores.gestionar','Proveedores','Agregar y activar/desactivar proveedores'),(23,'proveedores.eliminar','Proveedores','Eliminar un proveedor'),(24,'areas.ver','Áreas','Ver el catálogo de áreas'),(25,'areas.gestionar','Áreas','Agregar y editar áreas'),(26,'areas.eliminar','Áreas','Eliminar un área'),(27,'usuarios.ver','Usuarios','Ver el listado de usuarios'),(28,'usuarios.gestionar','Usuarios','Crear y editar usuarios'),(29,'usuarios.eliminar','Usuarios','Eliminar un usuario'),(30,'historial.ver','Historial','Ver la bitácora de auditoría del sistema'),(31,'roles.gestionar','Roles y Permisos','Crear roles y asignarles permisos (siempre restringido a Administrador)');
+INSERT INTO `permisos` VALUES (1,'gestiones.ver','Gestiones','Ver el listado y el detalle de gestiones'),(2,'gestiones.crear','Gestiones','Crear una gestión nueva'),(3,'gestiones.editar','Gestiones','Editar una gestión existente'),(4,'gestiones.eliminar','Gestiones','Eliminar una gestión'),(5,'proformas.ver','Proformas','Ver el listado y el detalle de proformas'),(6,'proformas.crear','Proformas','Crear una proforma nueva'),(7,'proformas.editar','Proformas','Editar una proforma existente'),(8,'proformas.eliminar','Proformas','Eliminar una proforma'),(9,'ordenes.ver','Órdenes de compra','Ver el listado y el detalle de órdenes de compra'),(10,'ordenes.crear','Órdenes de compra','Crear una orden de compra nueva'),(11,'ordenes.editar','Órdenes de compra','Editar una orden de compra existente'),(12,'ordenes.eliminar','Órdenes de compra','Eliminar una orden de compra'),(13,'facturas.ver','Facturas','Ver el listado y el detalle de facturas'),(14,'facturas.crear','Facturas','Registrar una factura nueva'),(15,'facturas.editar','Facturas','Editar una factura existente'),(16,'facturas.eliminar','Facturas','Eliminar una factura'),(17,'entregas.ver','Entregas','Ver el listado y el detalle de entregas'),(18,'entregas.crear','Entregas','Registrar una entrega nueva'),(19,'entregas.editar','Entregas','Editar una entrega existente'),(20,'entregas.eliminar','Entregas','Eliminar una entrega'),(21,'proveedores.ver','Proveedores','Ver el catálogo de proveedores'),(22,'proveedores.crear','Proveedores','Crear un nuevo proveedor'),(23,'proveedores.eliminar','Proveedores','Eliminar un proveedor'),(24,'areas.ver','Áreas','Ver el catálogo de áreas'),(25,'areas.gestionar','Áreas','Agregar y editar áreas'),(26,'areas.eliminar','Áreas','Eliminar un área'),(27,'usuarios.ver','Usuarios','Ver el listado de usuarios'),(28,'usuarios.crear','Usuarios','Crear un usuario nuevo'),(29,'usuarios.eliminar','Usuarios','Eliminar un usuario'),(30,'historial.ver','Historial','Ver la bitácora de auditoría del sistema'),(31,'roles.gestionar','Roles y Permisos','Crear roles y asignarles permisos (siempre restringido a Administrador)'),(32,'proveedores.editar','Proveedores','Editar información de proveedores'),(33,'usuarios.editar','Usuarios','Editar información y roles de usuarios'),(34,'proveedores.activar','Proveedores','Activar/desactivar proveedores y pase a proforma'),(35,'usuarios.activar','Usuarios','Activar/desactivar cuentas de usuario');
 /*!40000 ALTER TABLE `permisos` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -311,9 +311,16 @@ DROP TABLE IF EXISTS `proveedores`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `proveedores` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `nombre` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `nombre` varchar(120) COLLATE utf8mb4_unicode_ci NOT NULL,
   `activo` tinyint(1) NOT NULL DEFAULT '1',
-  PRIMARY KEY (`id`)
+  `habilitado_proforma` tinyint(1) NOT NULL DEFAULT '0',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `eliminado_en` timestamp NULL DEFAULT NULL,
+  `eliminado_por` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `proveedores_eliminado_por_fk` (`eliminado_por`),
+  CONSTRAINT `proveedores_eliminado_por_fk` FOREIGN KEY (`eliminado_por`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -323,7 +330,7 @@ CREATE TABLE `proveedores` (
 
 LOCK TABLES `proveedores` WRITE;
 /*!40000 ALTER TABLE `proveedores` DISABLE KEYS */;
-INSERT INTO `proveedores` VALUES (1,'Ares Sun',1),(2,'CIT',1);
+INSERT INTO `proveedores` VALUES (1,'Ares Sun',1,1,'2026-09-08 00:00:00','2026-09-08 00:00:00'),(2,'CIT',1,1,'2026-09-08 00:00:00','2026-09-08 00:00:00');
 /*!40000 ALTER TABLE `proveedores` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -350,7 +357,7 @@ CREATE TABLE `rol_permisos` (
 
 LOCK TABLES `rol_permisos` WRITE;
 /*!40000 ALTER TABLE `rol_permisos` DISABLE KEYS */;
-INSERT INTO `rol_permisos` VALUES (1,1),(2,1),(3,1),(4,1),(1,2),(2,2),(3,2),(1,3),(2,3),(3,3),(1,4),(2,4),(1,5),(2,5),(3,5),(4,5),(1,6),(2,6),(3,6),(1,7),(2,7),(3,7),(1,8),(2,8),(1,9),(2,9),(4,9),(1,10),(2,10),(1,11),(2,11),(1,12),(1,13),(2,13),(4,13),(1,14),(2,14),(1,15),(2,15),(1,16),(1,17),(2,17),(4,17),(1,18),(2,18),(1,19),(2,19),(1,20),(1,21),(2,21),(4,21),(1,22),(2,22),(1,23),(1,24),(2,24),(1,25),(1,26),(1,27),(1,28),(1,29),(1,30),(1,31);
+INSERT INTO `rol_permisos` VALUES (1,1),(2,1),(3,1),(4,1),(1,2),(2,2),(3,2),(1,3),(2,3),(3,3),(1,4),(2,4),(1,5),(2,5),(3,5),(4,5),(1,6),(2,6),(3,6),(1,7),(2,7),(3,7),(1,8),(2,8),(1,9),(2,9),(4,9),(1,10),(2,10),(1,11),(2,11),(1,12),(1,13),(2,13),(4,13),(1,14),(2,14),(1,15),(2,15),(1,16),(1,17),(2,17),(4,17),(1,18),(2,18),(1,19),(2,19),(1,20),(1,21),(2,21),(4,21),(1,22),(2,22),(1,23),(1,24),(2,24),(1,25),(1,26),(1,27),(1,28),(1,29),(1,30),(1,31),(1,32),(2,32),(1,33),(1,34),(2,34),(3,34),(1,35);
 /*!40000 ALTER TABLE `rol_permisos` ENABLE KEYS */;
 UNLOCK TABLES;
 

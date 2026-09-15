@@ -16,6 +16,7 @@ class RolController extends Controller
 {
     public function index(): void
     {
+        $totalPermisosSistema = Rol::contarTotalPermisos();
         $roles = Rol::todos();
         foreach ($roles as &$rol) {
             $rol['total_usuarios'] = Rol::contarUsuarios((int) $rol['id']);
@@ -23,7 +24,10 @@ class RolController extends Controller
         }
         unset($rol);
 
-        $this->view('roles/index', ['roles' => $roles]);
+        $this->view('roles/index', [
+            'roles'                => $roles,
+            'totalPermisosSistema' => $totalPermisosSistema,
+        ]);
     }
 
     public function store(): void

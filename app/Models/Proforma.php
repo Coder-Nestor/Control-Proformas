@@ -81,17 +81,17 @@ class Proforma extends Model
         return $stmt->fetchAll();
     }
 
-    public static function sinOrdenDeCompra(?int $incluirId = null): array
+      public static function sinOrdenDeCompra(?int $incluirId = null): array
     {
         $sql = "SELECT p.*, pr.nombre AS proveedor_nombre
                 FROM proformas p
                 LEFT JOIN proveedores pr ON pr.id = p.proveedor_id
                 WHERE p.eliminado_en IS NULL
-                  AND NOT EXISTS (SELECT 1 FROM ordenes_compra oc WHERE oc.proforma_id = p.id AND oc.eliminado_en IS NULL)";
+                  AND (NOT EXISTS (SELECT 1 FROM ordenes_compra oc WHERE oc.proforma_id = p.id AND oc.eliminado_en IS NULL)";
         if ($incluirId) {
             $sql .= ' OR p.id = :id';
         }
-        $sql .= ' ORDER BY p.id DESC';
+        $sql .= ') ORDER BY p.id DESC';
         $stmt = self::db()->prepare($sql);
         if ($incluirId) {
             $stmt->execute(['id' => $incluirId]);

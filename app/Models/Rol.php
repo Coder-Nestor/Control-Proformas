@@ -35,6 +35,12 @@ class Rol extends Model
         return (int) $stmt->fetchColumn();
     }
 
+    /** Total de permisos registrados en el sistema. */
+    public static function contarTotalPermisos(): int
+    {
+        return (int) self::db()->query('SELECT COUNT(*) FROM permisos')->fetchColumn();
+    }
+
     /** Todos los permisos del catálogo, agrupados por módulo — para pintar la matriz de checkboxes. */
     public static function catalogoPermisosPorModulo(): array
     {

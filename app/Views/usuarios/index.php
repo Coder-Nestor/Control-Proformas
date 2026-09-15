@@ -9,7 +9,7 @@
                 <i class="bi bi-info-circle me-1"></i>Administra los accesos al sistema
             </p>
         </div>
-        <?php if (Auth::can('usuarios.gestionar')): ?>
+        <?php if (Auth::can('usuarios.crear')): ?>
         <div class="mt-2 mt-sm-0">
             <a href="<?= base_url('/usuarios/crear') ?>" class="btn btn-primary rounded-pill px-4">
                 <i class="bi bi-person-plus me-2"></i>Nuevo usuario
@@ -24,7 +24,7 @@
                 <i class="bi bi-inbox text-muted" style="font-size: 4rem;"></i>
                 <h5 class="fw-bold text-secondary mt-3">No hay usuarios registrados</h5>
                 <p class="text-muted">Crea el primero con el botón de arriba.</p>
-                <?php if (Auth::can('usuarios.gestionar')): ?>
+                <?php if (Auth::can('usuarios.crear')): ?>
                 <a href="<?= base_url('/usuarios/crear') ?>" class="btn btn-primary rounded-pill px-4 mt-2">
                     <i class="bi bi-person-plus me-2"></i>Crear primer usuario
                 </a>
@@ -69,9 +69,11 @@
                             </td>
                             <td class="text-end pe-3 py-3">
                                 <div class="d-flex justify-content-end gap-1">
-                                    <?php if (Auth::can('usuarios.gestionar')): ?>
+                                    <?php if (Auth::can('usuarios.editar')): ?>
                                         <a href="<?= base_url('/usuarios/' . $u['id'] . '/editar') ?>" class="btn btn-outline-primary btn-sm rounded-pill" title="Editar"><i class="bi bi-pencil"></i></a>
+                                    <?php endif; ?>
 
+                                    <?php if (Auth::can('usuarios.activar')): ?>
                                         <?php if ((int)$u['id'] === (int)Auth::id()): ?>
                                             <button class="btn btn-outline-secondary btn-sm rounded-pill px-3" disabled title="No puedes desactivar tu propia cuenta">
                                                 <?= $u['activo'] ? 'Desactivar' : 'Activar' ?>
@@ -79,19 +81,21 @@
                                         <?php elseif ($u['activo']): ?>
                                             <form method="POST" action="<?= base_url('/usuarios/' . $u['id'] . '/toggle-estado') ?>" class="d-inline" onsubmit="return confirm('¿Desactivar a <?= e(addslashes($u['nombre'])) ?>? No podrá iniciar sesión.');">
                                                 <?= csrf_field() ?>
-                                        <button class="btn btn-outline-secondary btn-sm rounded-pill px-3">
-                                            <?= $u['activo'] ? 'Desactivar' : 'Activar' ?>
-                                        </button>
+                                                <button class="btn btn-outline-secondary btn-sm rounded-pill px-3" title="Desactivar usuario">
+                                                    Desactivar
+                                                </button>
                                             </form>
                                         <?php else: ?>
                                             <form method="POST" action="<?= base_url('/usuarios/' . $u['id'] . '/toggle-estado') ?>" class="d-inline" onsubmit="return confirm('¿Activar a <?= e(addslashes($u['nombre'])) ?>? Podrá iniciar sesión nuevamente.');">
                                                 <?= csrf_field() ?>
-                                            <button class="btn btn-outline-secondary btn-sm rounded-pill px-3">
-                                            <?= $u['activo'] ? 'Desactivar' : 'Activar' ?>
-                                        </button>
+                                                <button class="btn btn-outline-success btn-sm rounded-pill px-3" title="Activar usuario">
+                                                    Activar
+                                                </button>
                                             </form>
                                         <?php endif; ?>
-                                    <?php else: ?>
+                                    <?php endif; ?>
+
+                                    <?php if (!Auth::can('usuarios.editar') && !Auth::can('usuarios.activar')): ?>
                                         <span class="text-muted small">—</span>
                                     <?php endif; ?>
                                 </div>

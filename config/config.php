@@ -57,7 +57,8 @@ return [
         'password' => '',
         'charset' => 'utf8mb4',
     ],
-    'session' => ['name' => 'test_session', 'lifetime' => 120],
+    'session' => ['name' => 'test_session', 'lifetime' => 120, 'version' => 2,],
+    
 ];
 
 

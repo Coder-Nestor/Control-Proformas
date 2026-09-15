@@ -123,7 +123,7 @@
                             <!-- Total permisos -->
                             <td class="text-center py-3">
                                 <span class="badge bg-primary-subtle text-primary fw-normal">
-                                    <?= (int) $r['total_permisos'] ?> de 31
+                                    <?= (int) $r['total_permisos'] ?> de <?= (int) ($totalPermisosSistema ?? 35) ?>
                                 </span>
                             </td>
 

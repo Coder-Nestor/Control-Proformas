@@ -76,11 +76,14 @@ return [
     ['POST', '/entregas/{id}',          [EntregaFacturaController::class, 'update'],  'entregas.editar'],
     ['POST', '/entregas/{id}/eliminar', [EntregaFacturaController::class, 'destroy'], 'entregas.eliminar'],
 
-    // Proveedores (ya migrado antes)
-    ['GET',  '/proveedores',               [ProveedorController::class, 'index'],   'proveedores.ver'],
-    ['POST', '/proveedores',               [ProveedorController::class, 'store'],   'proveedores.gestionar'],
-    ['POST', '/proveedores/{id}',          [ProveedorController::class, 'update'],  'proveedores.gestionar'],
-    ['POST', '/proveedores/{id}/eliminar', [ProveedorController::class, 'destroy'], 'proveedores.eliminar'],
+    // Proveedores
+    ['GET',  '/proveedores',                        [ProveedorController::class, 'index'],           'proveedores.ver'],
+    ['GET',  '/proveedores/similares',              [ProveedorController::class, 'buscarSimilares'], 'proveedores.ver'],
+    ['POST', '/proveedores',                        [ProveedorController::class, 'store'],           'proveedores.crear'],
+    ['POST', '/proveedores/{id}',                   [ProveedorController::class, 'update'],          'proveedores.editar'],
+    ['POST', '/proveedores/{id}/toggle-proforma',   [ProveedorController::class, 'toggleProforma'],  'proveedores.activar'],
+    ['POST', '/proveedores/{id}/toggle-estado',     [ProveedorController::class, 'toggleEstado'],    'proveedores.activar'],
+    ['POST', '/proveedores/{id}/eliminar',          [ProveedorController::class, 'destroy'],         'proveedores.eliminar'],
 
     // Áreas — MIGRADO
     ['GET',  '/areas',               [AreaController::class, 'index'],   'areas.ver'],
@@ -91,13 +94,13 @@ return [
     // Historial / Auditoría — MIGRADO
     ['GET', '/historial', [HistorialController::class, 'index'], 'historial.ver'],
 
-    // Usuarios (ya migrado antes)
+    // Usuarios
     ['GET',  '/usuarios',                      [UsuarioController::class, 'index'],        'usuarios.ver'],
-    ['GET',  '/usuarios/crear',                [UsuarioController::class, 'create'],       'usuarios.gestionar'],
-    ['POST', '/usuarios',                      [UsuarioController::class, 'store'],        'usuarios.gestionar'],
-    ['GET',  '/usuarios/{id}/editar',          [UsuarioController::class, 'edit'],         'usuarios.gestionar'],
-    ['POST', '/usuarios/{id}',                 [UsuarioController::class, 'update'],       'usuarios.gestionar'],
-    ['POST', '/usuarios/{id}/toggle-estado',   [UsuarioController::class, 'toggleEstado'], 'usuarios.gestionar'],
+    ['GET',  '/usuarios/crear',                [UsuarioController::class, 'create'],       'usuarios.crear'],
+    ['POST', '/usuarios',                      [UsuarioController::class, 'store'],        'usuarios.crear'],
+    ['GET',  '/usuarios/{id}/editar',          [UsuarioController::class, 'edit'],         'usuarios.editar'],
+    ['POST', '/usuarios/{id}',                 [UsuarioController::class, 'update'],       'usuarios.editar'],
+    ['POST', '/usuarios/{id}/toggle-estado',   [UsuarioController::class, 'toggleEstado'], 'usuarios.activar'],
     ['POST', '/usuarios/{id}/eliminar',        [UsuarioController::class, 'destroy'],      'usuarios.eliminar'],
 
 

@@ -76,9 +76,13 @@ $isEdit = !empty($u);
                             <span class="input-group-text bg-light"><i class="bi bi-shield"></i></span>
                             <select name="rol_id" class="form-select" required>
                                 <?php foreach ($roles as $r): ?>
-                                    <option value="<?= (int) $r['id'] ?>" <?= (string) ($u['rol_id'] ?? '') === (string) $r['id'] ? 'selected' : '' ?>><?= e($r['nombre']) ?></option>
+                                    <?php $esRolAdministrador = (int) $r['id'] === 1; ?>
+                                    <option value="<?= (int) $r['id'] ?>" <?= (string) ($u['rol_id'] ?? '') === (string) $r['id'] ? 'selected' : '' ?> <?= $rolAdministradorBloqueado && $esRolAdministrador ? 'disabled' : '' ?>><?= e($r['nombre']) ?></option>
                                 <?php endforeach; ?>
                             </select>
+                            <?php if ($rolAdministradorBloqueado): ?>
+                                <input type="hidden" name="rol_id" value="1">
+                            <?php endif; ?>
                         </div>
                     </div>
                     <div class="col-md-6">
@@ -102,8 +106,13 @@ $isEdit = !empty($u);
                                 <small class="text-muted">Si lo desactivas, no podrá iniciar sesión.</small>
                             </div>
                             <div class="form-check form-switch">
-                                <input type="hidden" name="activo" value="0">
-                                <input type="checkbox" name="activo" value="1" class="form-check-input" id="activo" role="switch" style="width: 3em; height: 1.5em;" <?= !empty($u['activo']) ? 'checked' : '' ?>>
+                                <?php if (\Core\Auth::can('usuarios.activar')): ?>
+                                    <input type="hidden" name="activo" value="0">
+                                    <input type="checkbox" name="activo" value="1" class="form-check-input" id="activo" role="switch" style="width: 3em; height: 1.5em;" <?= !empty($u['activo']) ? 'checked' : '' ?>>
+                                <?php else: ?>
+                                    <input type="hidden" name="activo" value="<?= !empty($u['activo']) ? '1' : '0' ?>">
+                                    <input type="checkbox" class="form-check-input" role="switch" style="width: 3em; height: 1.5em;" <?= !empty($u['activo']) ? 'checked' : '' ?> disabled>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>

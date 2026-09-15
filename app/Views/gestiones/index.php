@@ -33,7 +33,7 @@
                         </span>
                         <input type="text" name="buscar" value="<?= e($filtros['buscar']) ?>" 
                                class="form-control border-start-0" 
-                               placeholder="Buscar por trabajo o N° cotización...">
+                               placeholder="Buscar por trabajo, N° cotización o proveedor...">
                     </div>
                 </div>
                 <div class="col-md-4">
